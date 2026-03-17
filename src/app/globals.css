@@ -1,0 +1,675 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Custom Theme Variables for StarrLign */
+:root {
+  /* Core Brand Colors */
+  --brand-blue: #0052b4;
+  --brand-blue-dark: #003d8a;
+  --brand-blue-light: #1a6fd4;
+  --brand-red: #ed1c24;
+  --brand-red-dark: #c0141b;
+  --brand-yellow: #ffd100;
+  --brand-yellow-dark: #e6bc00;
+  --brand-green: #22c55e;
+  
+  /* Neutrals */
+  --white: #ffffff;
+  --shimmering-opal: #F2F4E5;
+  --off-white: #f5f5f0;
+  --gray-100: #f0f0ee;
+  --gray-200: #e2e2de;
+  --gray-400: #a0a09a;
+  --gray-600: #5a5a55;
+  --gray-800: #2a2a25;
+  --black: #111111;
+  
+  /* Shadows */
+  --shadow-hard: 4px 4px 0px var(--black);
+  --shadow-blue: 4px 4px 0px var(--brand-blue-dark);
+  --shadow-red: 4px 4px 0px var(--brand-red-dark);
+  --shadow-yellow: 4px 4px 0px var(--brand-yellow-dark);
+  
+  /* Border & Radius */
+  --border: 2px solid var(--black);
+  --radius: 8px;
+  
+  /* Build-safe font stacks that preserve the same CSS variable contract. */
+  --font-bebas-neue: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  --font-dm-sans: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-space-mono: 'Cascadia Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --font-display: var(--font-bebas-neue), sans-serif;
+  --font-body: var(--font-dm-sans), sans-serif;
+  --font-mono: var(--font-space-mono), monospace;
+  
+  /* shadcn/ui variables */
+  --radius: 0.5rem;
+  --background: var(--white);
+  --foreground: var(--black);
+  --card: var(--white);
+  --card-foreground: var(--black);
+  --popover: var(--white);
+  --popover-foreground: var(--black);
+  --primary: var(--brand-red);
+  --primary-foreground: var(--white);
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--black);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-600);
+  --accent: var(--brand-yellow);
+  --accent-foreground: var(--black);
+  --destructive: var(--brand-red);
+  --border: var(--gray-200);
+  --input: var(--gray-200);
+  --ring: var(--brand-blue);
+  
+  --sidebar: var(--brand-blue);
+  --sidebar-foreground: var(--white);
+  --sidebar-primary: var(--brand-yellow);
+  --sidebar-primary-foreground: var(--black);
+  --sidebar-accent: rgba(255,255,255,0.1);
+  --sidebar-accent-foreground: var(--white);
+  --sidebar-border: rgba(255,255,255,0.1);
+  --sidebar-ring: var(--brand-yellow);
+  
+  /* Easing Curves */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Custom colors */
+  --color-shimmering-opal: var(--shimmering-opal);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-blue-dark: var(--brand-blue-dark);
+  --color-brand-blue-light: var(--brand-blue-light);
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-dark: var(--brand-red-dark);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-yellow-dark: var(--brand-yellow-dark);
+  --color-brand-green: var(--brand-green);
+  --color-off-white: var(--off-white);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-400: var(--gray-400);
+  --color-gray-600: var(--gray-600);
+  --color-gray-800: var(--gray-800);
+}
+
+/* ============================================
+   STARRLIGN CUSTOM CURSORS
+   ★ Default: Star cursor (exploring/navigating)
+   → Action: Focused beam cursor (clicking/focusing)
+   The essence: Star energy concentrated into a beam
+   ============================================ */
+
+/* Star cursor - the "Starr" - for default navigation */
+:root {
+  --cursor-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffd100' stroke='%23111111' stroke-width='1' d='M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 17l-6.3 4 2.3-7.2-6-4.4h7.6z'/%3E%3C/svg%3E") 12 12, auto;
+  
+  /* Focused beam cursor - the "Lign" - concentrated light for action */
+  --cursor-beam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='beam' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23ffd100'/%3E%3Cstop offset='100%25' style='stop-color:%23ff8c00'/%3E%3C/linearGradient%3E%3C/defs%3E%3C!-- Concentric circles representing focused energy --%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffd100' stroke='%23111111' stroke-width='0.5'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23ffd100' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffd100' stroke-width='0.5' opacity='0.3'/%3E%3C!-- Focused point at center --%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23ed1c24'/%3E%3C/svg%3E") 16 16, pointer;
+  
+  /* Text/selection cursor - star with text line */
+  --cursor-text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='28' viewBox='0 0 24 28'%3E%3Cpath fill='%23ffd100' stroke='%23111111' stroke-width='1' d='M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 17l-6.3 4 2.3-7.2-6-4.4h7.6z'/%3E%3Cline x1='4' y1='24' x2='20' y2='24' stroke='%23111111' stroke-width='2'/%3E%3Cline x1='8' y1='22' x2='8' y2='26' stroke='%23111111' stroke-width='1'/%3E%3Cline x1='12' y1='22' x2='12' y2='26' stroke='%23111111' stroke-width='1'/%3E%3Cline x1='16' y1='22' x2='16' y2='26' stroke='%23111111' stroke-width='1'/%3E%3C/svg%3E") 12 14, text;
+}
+
+/* Dark mode cursors - lighter stroke for visibility */
+.dark {
+  --cursor-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffd100' stroke='%23ffffff' stroke-width='1' d='M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 17l-6.3 4 2.3-7.2-6-4.4h7.6z'/%3E%3C/svg%3E") 12 12, auto;
+  --cursor-beam: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffd100' stroke='%23ffffff' stroke-width='0.5'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23ffd100' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ffd100' stroke-width='0.5' opacity='0.3'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23ed1c24'/%3E%3C/svg%3E") 16 16, pointer;
+  --cursor-text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='28' viewBox='0 0 24 28'%3E%3Cpath fill='%23ffd100' stroke='%23ffffff' stroke-width='1' d='M12 2l2.4 7.4H22l-6 4.4 2.3 7.2L12 17l-6.3 4 2.3-7.2-6-4.4h7.6z'/%3E%3Cline x1='4' y1='24' x2='20' y2='24' stroke='%23ffffff' stroke-width='2'/%3E%3Cline x1='8' y1='22' x2='8' y2='26' stroke='%23ffffff' stroke-width='1'/%3E%3Cline x1='12' y1='22' x2='12' y2='26' stroke='%23ffffff' stroke-width='1'/%3E%3Cline x1='16' y1='22' x2='16' y2='26' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E") 12 14, text;
+}
+
+/* Apply star cursor globally */
+* {
+  cursor: var(--cursor-star) !important;
+}
+
+/* Focused beam cursor for all interactive elements */
+a, button, [role="button"], input[type="submit"], input[type="button"],
+input[type="checkbox"], input[type="radio"], label,
+select, [tabindex]:not([tabindex="-1"]),
+[onclick], .cursor-pointer, .btn-interactive, .btn-shine,
+.sidebar-item, .project-item, .task-card, .document-card,
+[role="tab"], [role="menuitem"], [role="option"],
+details summary, .clickable, .selectable {
+  cursor: var(--cursor-beam) !important;
+}
+
+/* Text cursor for text inputs and editable areas */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="search"], input[type="number"], input[type="tel"],
+input[type="url"], textarea, [contenteditable="true"],
+[contenteditable=""], .focus-editable {
+  cursor: var(--cursor-text) !important;
+}
+
+/* Keep resize handles functional */
+* {
+  caret-color: var(--brand-yellow);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    font-family: var(--font-body);
+    background: var(--off-white);
+    color: var(--black);
+  }
+  
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+  }
+}
+
+/* Custom Scrollbar - Brand Colors */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--brand-blue) 0%, var(--brand-yellow) 100%);
+  border-radius: 4px;
+  border: 2px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--brand-blue-light) 0%, var(--brand-yellow) 100%);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand-blue) var(--gray-100);
+}
+
+/* Animation keyframes */
+@keyframes pulse {
+  0% { transform: scale(1); text-shadow: 0 0 0 rgba(0,0,0,0); }
+  50% { transform: scale(1.1); text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+  100% { transform: scale(1); }
+}
+
+@keyframes modalIn {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes toastIn {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes checkmark {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes strikethrough {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Utility classes for the brutalist design */
+.shadow-hard {
+  box-shadow: 4px 4px 0px var(--black);
+  transition: all 0.2s var(--ease-bounce);
+}
+
+.shadow-hard:hover {
+  box-shadow: 6px 6px 0px var(--black);
+  transform: translate(-2px, -2px);
+}
+
+.shadow-blue {
+  box-shadow: 4px 4px 0px var(--brand-blue-dark);
+}
+
+.shadow-red {
+  box-shadow: 4px 4px 0px var(--brand-red-dark);
+}
+
+.shadow-yellow {
+  box-shadow: 4px 4px 0px var(--brand-yellow-dark);
+}
+
+.border-hard {
+  border: 2px solid var(--black);
+}
+
+/* Font classes */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Interactive Button Base */
+.btn-interactive {
+  transition: all 0.15s var(--ease-bounce);
+}
+
+.btn-interactive:hover {
+  transform: translate(-2px, -2px);
+}
+
+.btn-interactive:active {
+  transform: translate(0, 0);
+  transition: all 0.05s var(--ease-smooth);
+}
+
+/* Tactile Card Effect */
+.tactile-card {
+  transition: all 0.2s var(--ease-bounce);
+  box-shadow: 3px 3px 0 var(--gray-200);
+}
+
+.tactile-card:hover {
+  box-shadow: 5px 5px 0 var(--black);
+  transform: translate(-1px, -1px);
+}
+
+.tactile-card:active {
+  box-shadow: 2px 2px 0 var(--gray-400);
+  transform: translate(0, 0);
+}
+
+/* Focus Editable State */
+.focus-editable {
+  transition: all 0.2s var(--ease-smooth);
+  outline: none;
+}
+
+.focus-editable:focus {
+  border: 2px dashed var(--brand-blue) !important;
+  background: rgba(0, 82, 180, 0.05);
+  border-radius: 4px;
+}
+
+/* Subtask Checkbox Animation */
+.subtask-checkbox {
+  transition: all 0.15s var(--ease-spring);
+}
+
+.subtask-checkbox.checked {
+  animation: checkmark 0.3s var(--ease-bounce);
+}
+
+/* Strikethrough Animation */
+.strikethrough-animate {
+  position: relative;
+}
+
+.strikethrough-animate::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--gray-400);
+  animation: strikethrough 0.3s var(--ease-smooth) forwards;
+}
+
+/* Shine Effect for Buttons */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.btn-shine:hover::before {
+  left: 100%;
+}
+
+/* Card Shine Effect */
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg) translateX(-100%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.card-shine:hover::after {
+  transform: rotate(45deg) translateX(100%);
+}
+
+/* Custom Scrollbar for Cards */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+}
+
+/* Dark Mode Variables */
+.dark {
+  --background: #111111;
+  --foreground: #ffffff;
+  --card: #1a1a1a;
+  --card-foreground: #ffffff;
+  --popover: #1a1a1a;
+  --popover-foreground: #ffffff;
+  --primary: #ed1c24;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #ffffff;
+  --muted: #2a2a2a;
+  --muted-foreground: #a0a09a;
+  --accent: #ffd100;
+  --accent-foreground: #111111;
+  --border: #2a2a2a;
+  --input: #2a2a2a;
+  --off-white: #0a0a0a;
+  --gray-100: #1a1a1a;
+  --gray-200: #2a2a2a;
+  --gray-400: #80807a;
+  --gray-600: #b0b0aa;
+  --gray-800: #d0d0ca;
+  --black: #ffffff;
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #ffffff;
+}
+
+/* Dark mode star pattern background */
+.dark body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1.5px 1.5px at 90px 40px, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1.5px 1.5px at 160px 120px, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 200px 50px, rgba(255,255,255,0.25), transparent),
+    radial-gradient(1px 1px at 220px 140px, rgba(255,255,255,0.2), transparent),
+    radial-gradient(1.5px 1.5px at 260px 90px, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 300px 30px, rgba(255,255,255,0.15), transparent),
+    radial-gradient(1px 1px at 340px 150px, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1.5px 1.5px at 380px 70px, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 420px 110px, rgba(255,255,255,0.2), transparent);
+  background-size: 450px 180px;
+  animation: twinkle 8s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Dark mode specific overrides */
+.dark .bg-black {
+  background-color: #1a1a1a !important;
+}
+
+.dark .text-black {
+  color: #ffffff !important;
+}
+
+.dark .border-black {
+  border-color: #3a3a3a !important;
+}
+
+.dark .shadow-\[4px_4px_0_black\],
+.dark .shadow-\[6px_6px_0_black\],
+.dark .shadow-\[8px_8px_0_black\] {
+  box-shadow: 4px 4px 0 #3a3a3a !important;
+}
+
+.dark .shadow-\[2px_2px_0_black\] {
+  box-shadow: 2px 2px 0 #3a3a3a !important;
+}
+
+.dark .bg-white {
+  background-color: #1a1a1a !important;
+}
+
+.dark .text-white {
+  color: #ffffff !important;
+}
+
+/* 
+ * GLOBAL RULE: White text on vibrant backgrounds turns BLACK in Dark Mode
+ * This ensures readability on yellow, red, blue, green, and other vibrant backgrounds
+ */
+.dark .bg-\[var\(--brand-yellow\)\],
+.dark .bg-\[var\(--brand-red\)\],
+.dark .bg-\[var\(--brand-blue\)\],
+.dark .bg-\[var\(--brand-green\)\],
+.dark .bg-\[\#22c55e\],
+.dark .bg-\[\#ffd100\],
+.dark .bg-\[\#ed1c24\],
+.dark .bg-\[\#0052b4\],
+.dark .bg-yellow-400,
+.dark .bg-yellow-500,
+.dark .bg-yellow-300,
+.dark .bg-red-500,
+.dark .bg-red-600,
+.dark .bg-red-400,
+.dark .bg-blue-500,
+.dark .bg-blue-600,
+.dark .bg-blue-400,
+.dark .bg-green-500,
+.dark .bg-green-600,
+.dark .bg-green-400,
+.dark .bg-orange-500,
+.dark .bg-pink-500,
+.dark .bg-purple-500 {
+  color: #000000 !important;
+}
+
+/* Target text-white children of vibrant backgrounds */
+.dark .bg-\[var\(--brand-yellow\)\] .text-white,
+.dark .bg-\[var\(--brand-red\)\] .text-white,
+.dark .bg-\[var\(--brand-blue\)\] .text-white,
+.dark .bg-\[var\(--brand-green\)\] .text-white,
+.dark .bg-\[\#22c55e\] .text-white,
+.dark .bg-\[\#ffd100\] .text-white,
+.dark .bg-\[\#ed1c24\] .text-white,
+.dark .bg-\[\#0052b4\] .text-white,
+.dark .bg-yellow-400 .text-white,
+.dark .bg-yellow-500 .text-white,
+.dark .bg-yellow-300 .text-white,
+.dark .bg-red-500 .text-white,
+.dark .bg-red-600 .text-white,
+.dark .bg-red-400 .text-white,
+.dark .bg-blue-500 .text-white,
+.dark .bg-blue-600 .text-white,
+.dark .bg-blue-400 .text-white,
+.dark .bg-green-500 .text-white,
+.dark .bg-green-600 .text-white,
+.dark .bg-green-400 .text-white,
+.dark .bg-orange-500 .text-white,
+.dark .bg-pink-500 .text-white,
+.dark .bg-purple-500 .text-white {
+  color: #000000 !important;
+}
+
+/* Also target buttons with these backgrounds */
+.dark button.bg-\[var\(--brand-yellow\)\],
+.dark button.bg-\[var\(--brand-red\)\],
+.dark button.bg-\[var\(--brand-blue\)\],
+.dark button.bg-\[var\(--brand-green\)\],
+.dark button.bg-\[\#22c55e\],
+.dark button.bg-\[\#ffd100\],
+.dark button.bg-\[\#ed1c24\],
+.dark button.bg-\[\#0052b4\] {
+  color: #000000 !important;
+}
+
+/* Utility class for forcing black text in dark mode on vibrant backgrounds */
+.dark .text-black-on-vibrant {
+  color: #000000 !important;
+}
+
+.dark .border-white\/10,
+.dark .border-white\/20 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .bg-white\/10,
+.dark .bg-white\/20,
+.dark .bg-white\/40 {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+  border-color: #3a3a3a !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #80807a !important;
+}
+
+/* Dark mode Kanban column headers */
+.dark .kanban-header-todo {
+  background-color: #2a2a2a !important;
+}
+
+.dark .kanban-header-doing {
+  background-color: #1e3a5f !important;
+}
+
+.dark .kanban-header-review {
+  background-color: #5c4a00 !important;
+}
+
+.dark .kanban-header-done {
+  background-color: #14532d !important;
+}
+
+/* Progress glow animation */
+@keyframes progressGlow {
+  0% { box-shadow: 0 0 5px currentColor; }
+  50% { box-shadow: 0 0 15px currentColor, 0 0 25px currentColor; }
+  100% { box-shadow: 0 0 5px currentColor; }
+}
+
+.progress-glow {
+  animation: progressGlow 2s ease-in-out infinite;
+}
+
+/* Star glow red animation */
+@keyframes starGlowRed {
+  0%, 100% { 
+    text-shadow: 0 0 8px rgba(237, 28, 36, 0.3), 0 0 16px rgba(237, 28, 36, 0.2), 0 0 24px rgba(237, 28, 36, 0.1);
+    transform: scale(1);
+  }
+  50% { 
+    text-shadow: 0 0 12px rgba(237, 28, 36, 0.5), 0 0 24px rgba(237, 28, 36, 0.3), 0 0 36px rgba(237, 28, 36, 0.2);
+    transform: scale(1.05);
+  }
+}
+
+.star-glow-red {
+  animation: starGlowRed 2.5s ease-in-out infinite;
+}
+
