@@ -18,8 +18,11 @@ export default function ProjectView() {
     selectedProjectId, 
     setCurrentView, 
     updateTask, 
+    reorderTasksInProject,
     setProjectModalOpen, 
     setEditingProjectId, 
+    setEditingTaskId,
+    setDetailMode,
     documents, 
     setSelectedDocumentId,
     setModalOpen,
@@ -33,6 +36,7 @@ export default function ProjectView() {
   
   const [viewMode, setViewMode] = useState<ViewMode>('modular');
   const [showFilters, setShowFilters] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
   const projectTasks = selectedProject 
@@ -416,8 +420,34 @@ export default function ProjectView() {
       toast.success(`Moved to ${newStatus}`);
     };
 
+    const handleOpenTask = () => {
+      setEditingTaskId(task.id);
+      setDetailMode(true);
+      setModalOpen(true);
+    };
+
+    const handleEditTask = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingTaskId(task.id);
+      setDetailMode(false);
+      setModalOpen(true);
+    };
+
     return (
-      <div className="flex items-center gap-4 p-3 border-b-[1px] border-black/20 hover:bg-black/10 transition-colors group">
+      <div
+        onClick={handleOpenTask}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = 'move';
+          setDraggedTaskId(task.id);
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleTaskDrop(task.id);
+        }}
+        className="flex items-center gap-4 p-3 border-b-[1px] border-black/20 hover:bg-black/10 transition-colors group cursor-pointer"
+      >
         {/* Status indicator */}
         <div
           onClick={() => handleQuickMove(task.status === 'done' ? 'todo' : 'done')}
@@ -492,9 +522,19 @@ export default function ProjectView() {
         
         {/* Actions */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleEditTask}
+            className="text-[9px] px-2 py-1 bg-white/80 text-black rounded border-[1.5px] border-black"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            EDIT
+          </button>
           {task.status !== 'doing' && (
             <button
-              onClick={() => handleQuickMove('doing')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleQuickMove('doing');
+              }}
               className="text-[9px] px-2 py-1 bg-[var(--brand-blue)] text-white rounded border-[1.5px] border-black"
               style={{ fontFamily: 'var(--font-space-mono), monospace' }}
             >
@@ -504,6 +544,13 @@ export default function ProjectView() {
         </div>
       </div>
     );
+  };
+
+  const handleTaskDrop = (targetTaskId: string) => {
+    if (!draggedTaskId || !selectedProject) return;
+    reorderTasksInProject(selectedProject.name, draggedTaskId, targetTaskId);
+    setDraggedTaskId(null);
+    toast.success('Task order updated');
   };
 
   const projectColor = colorMap[selectedProject.color] || colorMap.gray;
@@ -714,4 +761,3 @@ export default function ProjectView() {
     </div>
   );
 }
-
