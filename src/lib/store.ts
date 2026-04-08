@@ -216,6 +216,35 @@ export const useStore = create<AppState>((set, get) => ({
     saveToDatabase(get());
   },
 
+  reorderTasksInProject: (projectName, draggedTaskId, targetTaskId) => {
+    if (draggedTaskId === targetTaskId) return;
+    set((state) => {
+      const projectTaskIds = state.tasks
+        .filter((task) => task.project === projectName && !task.isArchived)
+        .map((task) => task.id);
+
+      const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
+      const targetIndex = projectTaskIds.indexOf(targetTaskId);
+      if (sourceIndex === -1 || targetIndex === -1) return state;
+
+      const reorderedIds = [...projectTaskIds];
+      const [moved] = reorderedIds.splice(sourceIndex, 1);
+      reorderedIds.splice(targetIndex, 0, moved);
+
+      const taskById = new Map(state.tasks.map((task) => [task.id, task]));
+      const reorderedProjectTasks = reorderedIds
+        .map((id) => taskById.get(id))
+        .filter((task): task is Task => Boolean(task));
+
+      const nonProjectTasks = state.tasks.filter(
+        (task) => !(task.project === projectName && !task.isArchived)
+      );
+
+      return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
+    });
+    saveToDatabase(get());
+  },
+
   deleteTask: (id) => {
     set((state) => ({
       tasks: state.tasks.filter((task) => task.id !== id),
@@ -313,6 +342,28 @@ export const useStore = create<AppState>((set, get) => ({
       });
       return { tasks };
     });
+    saveToDatabase(get());
+  },
+
+  createTag: (tag) => {
+    const normalizedTag = tag.trim();
+    if (!normalizedTag) return;
+
+    set((state) => {
+      if (state.tags.includes(normalizedTag)) return state;
+      return { tags: [...state.tags, normalizedTag] };
+    });
+    saveToDatabase(get());
+  },
+
+  deleteTag: (tag) => {
+    set((state) => ({
+      tags: state.tags.filter((existingTag) => existingTag !== tag),
+      tasks: state.tasks.map((task) => ({
+        ...task,
+        tags: task.tags.filter((taskTag) => taskTag !== tag),
+      })),
+    }));
     saveToDatabase(get());
   },
 
@@ -495,11 +546,23 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateProject: (id, updates) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
+    set((state) => {
+      const currentProject = state.projects.find((project) => project.id === id);
+      const updatedProjects = state.projects.map((project) =>
         project.id === id ? { ...project, ...updates } : project
-      ),
-    }));
+      );
+
+      if (!currentProject || !updates.name || updates.name === currentProject.name) {
+        return { projects: updatedProjects };
+      }
+
+      return {
+        projects: updatedProjects,
+        tasks: state.tasks.map((task) =>
+          task.project === currentProject.name ? { ...task, project: updates.name as string } : task
+        ),
+      };
+    });
     saveToDatabase(get());
   },
 
@@ -734,5 +797,3 @@ export const estimateReadTime = (wordCount: number): string => {
   const mins = Math.ceil(wordCount / 200);
   return `~${mins} min read`;
 };
-
-

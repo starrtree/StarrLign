@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function TaskModal() {
-  const { isModalOpen, setModalOpen, editingTaskId, tasks, projects, tags: allTags, addTask, updateTask, deleteTask, archiveTask, selectedProjectId, autoSetProjectForTask, setAutoSetProjectForTask, setDetailMode } = useStore();
+  const { isModalOpen, setModalOpen, editingTaskId, tasks, projects, tags: allTags, addTask, updateTask, deleteTask, archiveTask, selectedProjectId, autoSetProjectForTask, setAutoSetProjectForTask, setDetailMode, createTag, deleteTag } = useStore();
   
   // Find the task being edited
   const editingTask = useMemo(() => {
@@ -75,6 +75,8 @@ export default function TaskModal() {
       }}
       projects={projects}
       allTags={allTags}
+      onCreateTag={createTag}
+      onDeleteTag={deleteTag}
     />
   );
 }
@@ -89,6 +91,8 @@ function TaskModalContent({
   onArchive,
   projects,
   allTags,
+  onCreateTag,
+  onDeleteTag,
 }: {
   editingTask: Task | null;
   currentProjectName: string;
@@ -98,6 +102,8 @@ function TaskModalContent({
   onArchive: (taskId: string) => void;
   projects: { id: string; name: string }[];
   allTags: string[];
+  onCreateTag: (tag: string) => void;
+  onDeleteTag: (tag: string) => void;
 }) {
   // Form state - fresh on each mount
   const [formData, setFormData] = useState<Partial<Task>>(() => {
@@ -207,9 +213,9 @@ function TaskModalContent({
 
   const handleAddCustomTag = () => {
     const tag = tagInput.trim();
-    if (tag && !formData.tags?.includes(tag) && !allTags.includes(tag)) {
-      handleAddTag(tag);
-    }
+    if (!tag) return;
+    if (!allTags.includes(tag)) onCreateTag(tag);
+    if (!formData.tags?.includes(tag)) handleAddTag(tag);
     setTagInput('');
   };
 
@@ -236,11 +242,11 @@ function TaskModalContent({
     });
   };
 
-  const handleToggleSubtask = (id: string) => {
+  const handleEditSubtask = (id: string, text: string) => {
     setFormData({
       ...formData,
       subtasks: formData.subtasks?.map(st => 
-        st.id === id ? { ...st, done: !st.done } : st
+        st.id === id ? { ...st, text } : st
       ) || []
     });
   };
@@ -486,14 +492,27 @@ function TaskModalContent({
             <div className="flex flex-wrap gap-2">
               {/* Available tags */}
               {allTags.filter(t => !formData.tags?.includes(t)).map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleAddTag(tag)}
-                  className="text-[10px] px-2 py-1 bg-[#2a2a2a] text-white border-[2px] border-[#3a3a3a] rounded cursor-pointer transition-all duration-150 hover:bg-[var(--brand-yellow)] hover:text-black hover:border-black"
-                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-                >
-                  + #{tag}
-                </button>
+                <div key={tag} className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleAddTag(tag)}
+                    className="text-[10px] px-2 py-1 bg-[#2a2a2a] text-white border-[2px] border-[#3a3a3a] rounded cursor-pointer transition-all duration-150 hover:bg-[var(--brand-yellow)] hover:text-black hover:border-black"
+                    style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                  >
+                    + #{tag}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete tag "${tag}" everywhere? This removes it from all tasks.`)) {
+                        onDeleteTag(tag);
+                        toast.success(`Deleted #${tag} globally`);
+                      }
+                    }}
+                    className="p-1 text-white/40 hover:text-[var(--brand-red)]"
+                    title="Delete tag globally"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
             {/* Custom tag input */}
@@ -549,18 +568,11 @@ function TaskModalContent({
                   key={st.id}
                   className="flex items-center gap-2 p-2 bg-[#2a2a2a] border-[2px] border-[#3a3a3a] rounded-lg group"
                 >
-                  <div
-                    onClick={() => handleToggleSubtask(st.id)}
-                    className={cn(
-                      "w-5 h-5 border-[2px] border-[#3a3a3a] rounded-[4px] flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-150",
-                      st.done ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white" : "bg-[#1a1a1a]"
-                    )}
-                  >
-                    {st.done && <span className="text-[10px] font-bold">✓</span>}
-                  </div>
-                  <span className={cn("flex-1 text-sm text-white", st.done && "line-through text-white/40")}>
-                    {st.text}
-                  </span>
+                  <input
+                    value={st.text}
+                    onChange={(e) => handleEditSubtask(st.id, e.target.value)}
+                    className="flex-1 text-sm text-white bg-transparent border border-white/10 rounded px-2 py-1 outline-none focus:border-[var(--brand-blue)]"
+                  />
                   <button
                     onClick={() => handleRemoveSubtask(st.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--brand-red)] hover:text-white rounded transition-all duration-150 text-white/40"
@@ -632,4 +644,3 @@ function TaskModalContent({
     </div>
   );
 }
-

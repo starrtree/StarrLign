@@ -110,6 +110,7 @@ export interface AppState {
   setSelectedDocumentId: (id: string | null) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+  reorderTasksInProject: (projectName: string, draggedTaskId: string, targetTaskId: string) => void;
   deleteTask: (id: string) => void;
   archiveTask: (id: string) => void;
   restoreTask: (id: string) => void;
@@ -117,6 +118,8 @@ export interface AppState {
   addSubtask: (taskId: string, text: string) => void;
   updateSubtask: (taskId: string, subtaskId: string, text: string) => void;
   deleteSubtask: (taskId: string, subtaskId: string) => void;
+  createTag: (tag: string) => void;
+  deleteTag: (tag: string) => void;
   setEditingTaskId: (id: string | null) => void;
   setModalOpen: (open: boolean) => void;
   setDetailMode: (mode: boolean) => void;
@@ -183,4 +186,3 @@ export interface AppState {
   // Database sync
   hydrateFromDatabase: () => Promise<void>;
 }
-
