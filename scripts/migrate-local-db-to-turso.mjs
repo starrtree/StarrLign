@@ -64,6 +64,7 @@ async function initializeRemoteDatabase() {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       project TEXT,
+      linkedProjects TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
       due TEXT,
@@ -78,6 +79,12 @@ async function initializeRemoteDatabase() {
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  try {
+    await remoteClient.execute(`ALTER TABLE tasks ADD COLUMN linkedProjects TEXT DEFAULT '[]'`);
+  } catch {
+    // column already exists
+  }
 
   await remoteClient.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -139,6 +146,7 @@ async function readSnapshot() {
       id: String(row.id),
       title: String(row.title),
       project: row.project ? String(row.project) : '',
+      linkedProjects: parseJson(row.linkedProjects, row.project ? [String(row.project)] : []),
       priority: row.priority ? String(row.priority) : 'medium',
       status: row.status ? String(row.status) : 'todo',
       due: row.due ? String(row.due) : '',
@@ -191,11 +199,12 @@ async function writeSnapshot(snapshot) {
 
   for (const task of snapshot.tasks) {
     batchStatements.push({
-      sql: 'INSERT INTO tasks (id, title, project, priority, status, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO tasks (id, title, project, linkedProjects, priority, status, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         task.id,
         task.title,
         task.project || null,
+        JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
         task.priority,
         task.status,
         task.due || null,

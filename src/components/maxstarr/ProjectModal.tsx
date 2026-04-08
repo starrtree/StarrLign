@@ -103,7 +103,9 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const handleDelete = () => {
     if (!editingProjectId || !editingProject) return;
     
-    const projectTasks = tasks.filter(t => t.project === editingProject.name);
+    const projectTasks = tasks.filter(
+      (t) => t.project === editingProject.name || (t.linkedProjects || []).includes(editingProject.name)
+    );
     if (projectTasks.length > 0) {
       toast.error(`Cannot delete: ${projectTasks.length} tasks are assigned to this project`);
       return;
@@ -531,4 +533,3 @@ export default function ProjectModal() {
     </div>
   );
 }
-

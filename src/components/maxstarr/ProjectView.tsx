@@ -39,8 +39,10 @@ export default function ProjectView() {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const taskBelongsToProject = (task: Task, projectName: string) =>
+    task.project === projectName || (task.linkedProjects || []).includes(projectName);
   const projectTasks = selectedProject 
-    ? tasks.filter(t => t.project === selectedProject.name && !t.isArchived)
+    ? tasks.filter(t => taskBelongsToProject(t, selectedProject.name) && !t.isArchived)
     : [];
   const projectDocuments = selectedProject
     ? documents.filter(d => d.projectId === selectedProject.id && !d.isArchived)
@@ -116,7 +118,7 @@ export default function ProjectView() {
 
   // Project card for grid view
   const ProjectCard = ({ project }: { project: typeof projects[0] }) => {
-    const projectTasks = tasks.filter(t => t.project === project.name && !t.isArchived);
+    const projectTasks = tasks.filter(t => taskBelongsToProject(t, project.name) && !t.isArchived);
     const projectTaskCount = projectTasks.length;
     
     // Calculate progress including subtasks
@@ -396,6 +398,7 @@ export default function ProjectView() {
     done: projectTasks.filter(t => t.status === 'done').length,
     review: projectTasks.filter(t => t.status === 'review').length,
     high: projectTasks.filter(t => t.priority === 'high').length,
+    shared: projectTasks.filter(t => (t.linkedProjects || []).length > 1).length,
   };
 
   const handleBack = () => {
@@ -562,8 +565,8 @@ export default function ProjectView() {
         className="border-[2px] border-black rounded-lg shadow-[4px_4px_0_black] overflow-hidden mb-4"
         style={{ backgroundColor: projectColor }}
       >
-        <div className="bg-black px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-black px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={handleBack}
               className="flex items-center gap-1 text-[10px] px-2.5 py-1.5 bg-[var(--brand-blue)] text-white border-[2px] border-black rounded cursor-pointer transition-all hover:bg-[var(--brand-blue-dark)] shadow-[2px_2px_0_var(--brand-yellow)]"
@@ -573,7 +576,7 @@ export default function ProjectView() {
             </button>
             <span className="text-xl">{selectedProject.icon}</span>
             <h2
-              className="text-xl text-[var(--brand-yellow)] tracking-wide"
+              className="text-base md:text-xl text-[var(--brand-yellow)] tracking-wide whitespace-nowrap overflow-x-auto no-scrollbar min-w-0"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {selectedProject.name}
@@ -586,7 +589,7 @@ export default function ProjectView() {
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-between md:justify-end">
             {/* View Toggle */}
             <div className="flex items-center gap-1 bg-white/20 rounded-lg p-1">
               <button
@@ -655,6 +658,14 @@ export default function ProjectView() {
               <span className="font-bold">{stats.done}</span> Done
             </span>
           </div>
+          {stats.shared > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[var(--brand-blue)]" />
+              <span className={cn("text-xs", selectedProject.color === 'yellow' ? "text-black/70" : "text-white/80")} style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                <span className="font-bold">{stats.shared}</span> Shared
+              </span>
+            </div>
+          )}
           {stats.high > 0 && (
             <div className="flex items-center gap-2 ml-auto">
               <AlertCircle className="w-4 h-4 text-[var(--brand-red)]" />

@@ -9,6 +9,7 @@ export interface Task {
   id: string;
   title: string;
   project: string;
+  linkedProjects: string[];
   priority: 'high' | 'medium' | 'low';
   status: 'todo' | 'doing' | 'review' | 'done';
   due: string;

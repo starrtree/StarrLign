@@ -10,6 +10,7 @@ const initialTasks: Task[] = [
     id: 't1',
     title: 'Define Your North Star',
     project: 'Your Journey',
+    linkedProjects: ['Your Journey'],
     priority: 'high',
     status: 'doing',
     due: '',
@@ -97,6 +98,10 @@ const initialDatabaseSnapshot: DatabaseSnapshot = {
 const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => ({
   tasks: snapshot.tasks.map((task) => ({
     ...task,
+    linkedProjects:
+      task.linkedProjects && task.linkedProjects.length > 0
+        ? [...task.linkedProjects]
+        : [task.project].filter(Boolean),
     tags: [...task.tags],
     subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
   })),
@@ -203,14 +208,27 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedDocumentId: (id) => set({ selectedDocumentId: id }),
 
   addTask: (task) => {
-    set((state) => ({ tasks: [...state.tasks, task] }));
+    const linkedProjects =
+      task.linkedProjects && task.linkedProjects.length > 0
+        ? Array.from(new Set([task.project, ...task.linkedProjects]))
+        : [task.project];
+    set((state) => ({ tasks: [...state.tasks, { ...task, linkedProjects }] }));
     saveToDatabase(get());
   },
 
   updateTask: (id, updates) => {
     set((state) => ({
       tasks: state.tasks.map((task) =>
-        task.id === id ? { ...task, ...updates } : task
+        task.id === id
+          ? (() => {
+              const nextTask = { ...task, ...updates } as Task;
+              const normalizedLinkedProjects =
+                nextTask.linkedProjects && nextTask.linkedProjects.length > 0
+                  ? Array.from(new Set([nextTask.project, ...nextTask.linkedProjects]))
+                  : [nextTask.project];
+              return { ...nextTask, linkedProjects: normalizedLinkedProjects };
+            })()
+          : task
       ),
     }));
     saveToDatabase(get());
@@ -220,7 +238,11 @@ export const useStore = create<AppState>((set, get) => ({
     if (draggedTaskId === targetTaskId) return;
     set((state) => {
       const projectTaskIds = state.tasks
-        .filter((task) => task.project === projectName && !task.isArchived)
+        .filter(
+          (task) =>
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+        )
         .map((task) => task.id);
 
       const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
@@ -237,7 +259,11 @@ export const useStore = create<AppState>((set, get) => ({
         .filter((task): task is Task => Boolean(task));
 
       const nonProjectTasks = state.tasks.filter(
-        (task) => !(task.project === projectName && !task.isArchived)
+        (task) =>
+          !(
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+          )
       );
 
       return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
@@ -559,7 +585,15 @@ export const useStore = create<AppState>((set, get) => ({
       return {
         projects: updatedProjects,
         tasks: state.tasks.map((task) =>
-          task.project === currentProject.name ? { ...task, project: updates.name as string } : task
+          task.project === currentProject.name || task.linkedProjects?.includes(currentProject.name)
+            ? {
+                ...task,
+                project: task.project === currentProject.name ? (updates.name as string) : task.project,
+                linkedProjects: (task.linkedProjects || [task.project]).map((projectName) =>
+                  projectName === currentProject.name ? (updates.name as string) : projectName
+                ),
+              }
+            : task
         ),
       };
     });
@@ -738,6 +772,7 @@ export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
   id: uuid(),
   title: '',
   project: 'Your Journey',
+  linkedProjects: ['Your Journey'],
   priority: 'medium',
   status: 'todo',
   due: '',

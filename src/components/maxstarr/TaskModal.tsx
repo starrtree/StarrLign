@@ -111,6 +111,7 @@ function TaskModalContent({
       return {
         title: editingTask.title,
         project: editingTask.project,
+        linkedProjects: editingTask.linkedProjects?.length ? [...editingTask.linkedProjects] : [editingTask.project],
         priority: editingTask.priority,
         status: editingTask.status,
         durationHours: editingTask.durationHours,
@@ -124,6 +125,7 @@ function TaskModalContent({
     return {
       title: '',
       project: currentProjectName,
+      linkedProjects: [currentProjectName],
       priority: 'medium',
       status: 'todo',
       durationHours: 0,
@@ -151,8 +153,12 @@ function TaskModalContent({
       done: st.done || false,
     }));
 
+    const linkedProjects = (formData.linkedProjects || []).length > 0
+      ? Array.from(new Set([formData.project || currentProjectName, ...(formData.linkedProjects || [])]))
+      : [formData.project || currentProjectName];
+
     onSave(
-      { ...formData, subtasks },
+      { ...formData, linkedProjects, subtasks },
       !!editingTask,
       editingTask?.id
     );
@@ -306,7 +312,7 @@ function TaskModalContent({
               </label>
               <select
                 value={formData.project || ''}
-                onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, project: e.target.value, linkedProjects: Array.from(new Set([e.target.value, ...(formData.linkedProjects || [])])) })}
                 className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none cursor-pointer appearance-none transition-all duration-150"
                 style={{ 
                   fontFamily: 'var(--font-space-mono), monospace',
@@ -342,6 +348,33 @@ function TaskModalContent({
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
+            </div>
+          </div>
+
+          {/* Multi-project linking */}
+          <div className="mb-4">
+            <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Also linked to projects
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {projects.map((project) => (
+                <label key={project.id} className="flex items-center gap-2 text-xs text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={(formData.linkedProjects || []).includes(project.name)}
+                    onChange={(e) => {
+                      const selected = new Set(formData.linkedProjects || [formData.project || currentProjectName]);
+                      if (e.target.checked) {
+                        selected.add(project.name);
+                      } else if (project.name !== formData.project) {
+                        selected.delete(project.name);
+                      }
+                      setFormData({ ...formData, linkedProjects: Array.from(selected) });
+                    }}
+                  />
+                  <span>{project.name}</span>
+                </label>
+              ))}
             </div>
           </div>
 

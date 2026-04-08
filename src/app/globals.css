@@ -673,3 +673,12 @@ input[type="url"], textarea, [contenteditable="true"],
   animation: starGlowRed 2.5s ease-in-out infinite;
 }
 
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
