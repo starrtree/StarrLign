@@ -6,6 +6,7 @@ import { Task } from '@/lib/types';
 import { X, Clock, Calendar, Tag, CheckCircle, Circle, Pencil, Trash2, Archive, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { playAppSound } from '@/lib/sound';
 
 export default function TaskDetailModal() {
   const { 
@@ -19,7 +20,8 @@ export default function TaskDetailModal() {
     archiveTask,
     setEditingTaskId,
     setCurrentView,
-    setDetailMode
+    setDetailMode,
+    soundEnabled
   } = useStore();
   
   // Find the task being viewed
@@ -73,6 +75,7 @@ export default function TaskDetailModal() {
     if (task) {
       updateTask(task.id, { status: 'done', progress: 100 });
       toast.success('Task completed! 🎉');
+      playAppSound('taskComplete', soundEnabled);
       handleClose();
     }
   };
@@ -99,6 +102,7 @@ export default function TaskDetailModal() {
         st.id === subtaskId ? { ...st, done: !st.done } : st
       );
       updateTask(task.id, { subtasks: updatedSubtasks });
+      playAppSound('subtaskToggle', soundEnabled);
     }
   };
 
@@ -333,4 +337,3 @@ export default function TaskDetailModal() {
     </div>
   );
 }
-
