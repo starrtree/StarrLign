@@ -65,6 +65,7 @@ export async function initializeDatabase() {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       project TEXT,
+      linkedProjects TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
       due TEXT,
@@ -79,6 +80,12 @@ export async function initializeDatabase() {
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  try {
+    await turso.execute(`ALTER TABLE tasks ADD COLUMN linkedProjects TEXT DEFAULT '[]'`);
+  } catch {
+    // Column already exists on upgraded databases.
+  }
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS projects (

@@ -353,21 +353,17 @@ export default function DocumentEditor() {
       {/* Main Editor */}
       <div className="flex-1 max-w-[720px] mx-auto">
         {/* Toolbar */}
-        <div className="bg-black sticky top-[60px] z-50 flex items-center justify-between px-4 py-2 border-b-[2px] border-black">
-          <div className="flex items-center gap-1 flex-wrap">
-            {BLOCK_TYPES.map((bt) => (
-              <button
-                key={bt.type}
-                onClick={() => handleAddBlock(bt.type)}
-                className="text-[11px] px-2 py-1 bg-white/10 text-white border border-white/20 rounded cursor-pointer transition-all hover:bg-[var(--brand-yellow)] hover:text-black hover:border-[var(--brand-yellow)]"
-                style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-              >
-                {bt.icon}
-              </button>
-            ))}
-          </div>
+        <div className="bg-black sticky top-[60px] z-50 px-3 md:px-4 py-2 border-b-[2px] border-black">
+          <div className="flex items-center gap-2 justify-between mb-2">
+            {/* Back */}
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-1 text-[10px] px-2 py-1 text-white/80 bg-white/10 rounded hover:text-white transition-colors shrink-0"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              <ArrowLeft className="w-3 h-3" /> <span className="hidden sm:inline">All Docs</span>
+            </button>
 
-          <div className="flex items-center gap-3">
             {/* Project tag */}
             <div className="relative">
               <button 
@@ -435,15 +431,6 @@ export default function DocumentEditor() {
               {!isSaving && !isSaved && 'Ready'}
             </div>
 
-            {/* Back */}
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-1 text-[10px] px-2 py-1 text-white/70 hover:text-white transition-colors"
-              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-            >
-              <ArrowLeft className="w-3 h-3" /> All Docs
-            </button>
-
             {/* Menu */}
             <div className="relative">
               <button
@@ -487,6 +474,18 @@ export default function DocumentEditor() {
                 </div>
               )}
             </div>
+          </div>
+          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap no-scrollbar">
+            {BLOCK_TYPES.map((bt) => (
+              <button
+                key={bt.type}
+                onClick={() => handleAddBlock(bt.type)}
+                className="text-[11px] px-2 py-1 bg-white/10 text-white border border-white/20 rounded cursor-pointer transition-all hover:bg-[var(--brand-yellow)] hover:text-black hover:border-[var(--brand-yellow)] shrink-0"
+                style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+              >
+                {bt.icon}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -636,7 +635,7 @@ export default function DocumentEditor() {
                       <div
                         contentEditable
                         suppressContentEditableWarning
-                        onBlur={(e) => handleBlockContentChange(block.id, e.currentTarget.textContent || '')}
+                        onBlur={(e) => handleBlockContentChange(block.id, e.currentTarget.innerHTML || '')}
                         onKeyDown={(e) => {
                           if (e.key === '/' && !block.content) {
                             setShowBlockPicker(block.id);
@@ -644,9 +643,8 @@ export default function DocumentEditor() {
                         }}
                         className="text-[15px] leading-relaxed text-black outline-none min-h-[1.5em]"
                         data-placeholder="Start writing…"
-                      >
-                        {block.content}
-                      </div>
+                        dangerouslySetInnerHTML={{ __html: block.content || '' }}
+                      />
                       {blockControls}
                       
                       {/* Block picker */}
@@ -994,4 +992,3 @@ export default function DocumentEditor() {
     </div>
   );
 }
-

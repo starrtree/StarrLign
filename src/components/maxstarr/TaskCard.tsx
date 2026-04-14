@@ -80,6 +80,7 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
       onClick={handleCardClick}
       className={cn(
         "border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]",
+        task.status === 'done' && "opacity-70 saturate-50",
         deadlineStatus === 'overdue' && "border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1",
         deadlineStatus === 'approaching' && "border-[var(--brand-red)]"
       )}
@@ -113,9 +114,21 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
         {task.priority}
       </span>
 
+      {task.status === 'done' && (
+        <span
+          className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border border-black bg-[var(--brand-green)] text-white"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          COMPLETED
+        </span>
+      )}
+
       {/* Title */}
       <div 
-        className="text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]"
+        className={cn(
+          "text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]",
+          task.status === 'done' && "line-through"
+        )}
         style={{ color: colors.text }}
       >
         {task.title}
