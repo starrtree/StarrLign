@@ -53,6 +53,9 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const handleQuickMove = (newStatus: Task['status'], e: React.MouseEvent) => {
     e.stopPropagation();
     updateTask(task.id, { status: newStatus });
+    if (newStatus === 'done' && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:task-complete'));
+    }
     toast.success(`Task moved to ${newStatus.toUpperCase()}`);
   };
 
@@ -80,6 +83,7 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
       onClick={handleCardClick}
       className={cn(
         "border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]",
+        task.status === 'done' && "opacity-70 saturate-50",
         deadlineStatus === 'overdue' && "border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1",
         deadlineStatus === 'approaching' && "border-[var(--brand-red)]"
       )}
@@ -113,9 +117,21 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
         {task.priority}
       </span>
 
+      {task.status === 'done' && (
+        <span
+          className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border border-black bg-[var(--brand-green)] text-white"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          COMPLETED
+        </span>
+      )}
+
       {/* Title */}
       <div 
-        className="text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]"
+        className={cn(
+          "text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]",
+          task.status === 'done' && "line-through"
+        )}
         style={{ color: colors.text }}
       >
         {task.title}
@@ -131,6 +147,25 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           <Clock className="w-3 h-3" />
           {duration}
         </div>
+
+        {/* Tags */}
+        {(task.linkedProjects?.length ? task.linkedProjects : [task.project]).slice(0, 2).map((projectName, i) => (
+          <span
+            key={`${projectName}-${i}`}
+            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/35 text-black font-semibold"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            📁 {projectName}
+          </span>
+        ))}
+        {(task.linkedProjects?.length || 1) > 2 && (
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/20 text-white"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            +{(task.linkedProjects || [task.project]).length - 2}
+          </span>
+        )}
 
         {/* Tags */}
         {task.tags.map((tag, i) => (
