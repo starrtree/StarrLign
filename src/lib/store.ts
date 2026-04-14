@@ -806,7 +806,7 @@ export const formatDuration = (hours: number, minutes: number): string => {
 export const calculateWordCount = (blocks: Block[]): number => {
   const text = blocks
     .filter(b => ['h1', 'h2', 'h3', 'text', 'comment', 'callout'].includes(b.type))
-    .map(b => b.content)
+    .map(b => b.content.replace(/<[^>]+>/g, ' '))
     .join(' ');
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 };

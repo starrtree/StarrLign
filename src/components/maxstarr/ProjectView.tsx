@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore, formatDuration, formatRelativeTime, calculateWordCount } from '@/lib/store';
 import { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ export default function ProjectView() {
   const [viewMode, setViewMode] = useState<ViewMode>('modular');
   const [showFilters, setShowFilters] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
   const taskBelongsToProject = (task: Task, projectName: string) =>
@@ -47,6 +48,14 @@ export default function ProjectView() {
   const projectDocuments = selectedProject
     ? documents.filter(d => d.projectId === selectedProject.id && !d.isArchived)
     : [];
+  const activeProjectTasks = useMemo(
+    () => projectTasks.filter((task) => task.status !== 'done'),
+    [projectTasks]
+  );
+  const completedProjectTasks = useMemo(
+    () => projectTasks.filter((task) => task.status === 'done'),
+    [projectTasks]
+  );
 
   // Filter projects based on projectFilter
   const filteredProjects = projects.filter(p => {
@@ -700,7 +709,7 @@ export default function ProjectView() {
       ) : viewMode === 'modular' ? (
         /* Modular View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projectTasks.map(task => (
+          {activeProjectTasks.map(task => (
             <TaskCard key={task.id} task={task} />
           ))}
         </div>
@@ -711,7 +720,7 @@ export default function ProjectView() {
           style={{ backgroundColor: projectColor }}
         >
           <div className="divide-y divide-black/20">
-            {projectTasks
+            {activeProjectTasks
               .sort((a, b) => {
                 const statusOrder = { doing: 0, todo: 1, review: 2, done: 3 };
                 return statusOrder[a.status] - statusOrder[b.status];
@@ -719,6 +728,29 @@ export default function ProjectView() {
               .map(task => (
                 <TaskListItem key={task.id} task={task} />
               ))}
+          </div>
+        </div>
+      )}
+
+      {completedProjectTasks.length > 0 && (
+        <div className="mt-4 border-[2px] border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+          <button
+            onClick={() => setShowCompleted((prev) => !prev)}
+            className="w-full px-4 py-2 bg-[var(--brand-green)]/30 text-left text-xs font-bold tracking-wider flex items-center justify-between"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
+            <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
+          </button>
+          <div className="divide-y divide-black/20 bg-white/40">
+            {(showCompleted ? completedProjectTasks : completedProjectTasks.slice(0, 3)).map((task) => (
+              <TaskListItem key={task.id} task={task} />
+            ))}
+            {!showCompleted && completedProjectTasks.length > 3 && (
+              <div className="px-4 py-2 text-[11px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                +{completedProjectTasks.length - 3} more hidden
+              </div>
+            )}
           </div>
         </div>
       )}

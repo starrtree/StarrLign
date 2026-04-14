@@ -635,7 +635,7 @@ export default function DocumentEditor() {
                       <div
                         contentEditable
                         suppressContentEditableWarning
-                        onBlur={(e) => handleBlockContentChange(block.id, e.currentTarget.textContent || '')}
+                        onBlur={(e) => handleBlockContentChange(block.id, e.currentTarget.innerHTML || '')}
                         onKeyDown={(e) => {
                           if (e.key === '/' && !block.content) {
                             setShowBlockPicker(block.id);
@@ -643,9 +643,8 @@ export default function DocumentEditor() {
                         }}
                         className="text-[15px] leading-relaxed text-black outline-none min-h-[1.5em]"
                         data-placeholder="Start writing…"
-                      >
-                        {block.content}
-                      </div>
+                        dangerouslySetInnerHTML={{ __html: block.content || '' }}
+                      />
                       {blockControls}
                       
                       {/* Block picker */}
