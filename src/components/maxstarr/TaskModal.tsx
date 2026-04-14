@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function TaskModal() {
-  const { isModalOpen, setModalOpen, editingTaskId, tasks, projects, tags: allTags, addTask, updateTask, deleteTask, archiveTask, selectedProjectId, autoSetProjectForTask, setAutoSetProjectForTask, setDetailMode } = useStore();
+  const { isModalOpen, setModalOpen, editingTaskId, tasks, projects, tags: allTags, addTask, updateTask, deleteTask, archiveTask, selectedProjectId, autoSetProjectForTask, setAutoSetProjectForTask, setDetailMode, createTag, deleteTag } = useStore();
   
   // Find the task being edited
   const editingTask = useMemo(() => {
@@ -75,6 +75,8 @@ export default function TaskModal() {
       }}
       projects={projects}
       allTags={allTags}
+      onCreateTag={createTag}
+      onDeleteTag={deleteTag}
     />
   );
 }
@@ -89,6 +91,8 @@ function TaskModalContent({
   onArchive,
   projects,
   allTags,
+  onCreateTag,
+  onDeleteTag,
 }: {
   editingTask: Task | null;
   currentProjectName: string;
@@ -98,6 +102,8 @@ function TaskModalContent({
   onArchive: (taskId: string) => void;
   projects: { id: string; name: string }[];
   allTags: string[];
+  onCreateTag: (tag: string) => void;
+  onDeleteTag: (tag: string) => void;
 }) {
   // Form state - fresh on each mount
   const [formData, setFormData] = useState<Partial<Task>>(() => {
@@ -105,8 +111,11 @@ function TaskModalContent({
       return {
         title: editingTask.title,
         project: editingTask.project,
+        linkedProjects: editingTask.linkedProjects?.length ? [...editingTask.linkedProjects] : [editingTask.project],
         priority: editingTask.priority,
         status: editingTask.status,
+        startDate: editingTask.startDate,
+        endDate: editingTask.endDate,
         durationHours: editingTask.durationHours,
         durationMinutes: editingTask.durationMinutes,
         due: editingTask.due,
@@ -118,8 +127,11 @@ function TaskModalContent({
     return {
       title: '',
       project: currentProjectName,
+      linkedProjects: [currentProjectName],
       priority: 'medium',
       status: 'todo',
+      startDate: '',
+      endDate: '',
       durationHours: 0,
       durationMinutes: 30,
       due: '',
@@ -145,8 +157,12 @@ function TaskModalContent({
       done: st.done || false,
     }));
 
+    const linkedProjects = (formData.linkedProjects || []).length > 0
+      ? Array.from(new Set([formData.project || currentProjectName, ...(formData.linkedProjects || [])]))
+      : [formData.project || currentProjectName];
+
     onSave(
-      { ...formData, subtasks },
+      { ...formData, linkedProjects, subtasks },
       !!editingTask,
       editingTask?.id
     );
@@ -207,9 +223,9 @@ function TaskModalContent({
 
   const handleAddCustomTag = () => {
     const tag = tagInput.trim();
-    if (tag && !formData.tags?.includes(tag) && !allTags.includes(tag)) {
-      handleAddTag(tag);
-    }
+    if (!tag) return;
+    if (!allTags.includes(tag)) onCreateTag(tag);
+    if (!formData.tags?.includes(tag)) handleAddTag(tag);
     setTagInput('');
   };
 
@@ -236,11 +252,11 @@ function TaskModalContent({
     });
   };
 
-  const handleToggleSubtask = (id: string) => {
+  const handleEditSubtask = (id: string, text: string) => {
     setFormData({
       ...formData,
       subtasks: formData.subtasks?.map(st => 
-        st.id === id ? { ...st, done: !st.done } : st
+        st.id === id ? { ...st, text } : st
       ) || []
     });
   };
@@ -300,7 +316,7 @@ function TaskModalContent({
               </label>
               <select
                 value={formData.project || ''}
-                onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, project: e.target.value, linkedProjects: Array.from(new Set([e.target.value, ...(formData.linkedProjects || [])])) })}
                 className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none cursor-pointer appearance-none transition-all duration-150"
                 style={{ 
                   fontFamily: 'var(--font-space-mono), monospace',
@@ -336,6 +352,33 @@ function TaskModalContent({
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
               </select>
+            </div>
+          </div>
+
+          {/* Multi-project linking */}
+          <div className="mb-4">
+            <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Also linked to projects
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {projects.map((project) => (
+                <label key={project.id} className="flex items-center gap-2 text-xs text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={(formData.linkedProjects || []).includes(project.name)}
+                    onChange={(e) => {
+                      const selected = new Set(formData.linkedProjects || [formData.project || currentProjectName]);
+                      if (e.target.checked) {
+                        selected.add(project.name);
+                      } else if (project.name !== formData.project) {
+                        selected.delete(project.name);
+                      }
+                      setFormData({ ...formData, linkedProjects: Array.from(selected) });
+                    }}
+                  />
+                  <span>{project.name}</span>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -408,6 +451,32 @@ function TaskModalContent({
                   <span className="text-xs font-bold text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>min</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Timeframe */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={formData.startDate || ''}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                Event / End Date
+              </label>
+              <input
+                type="date"
+                value={formData.endDate || ''}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none"
+              />
             </div>
           </div>
 
@@ -486,14 +555,27 @@ function TaskModalContent({
             <div className="flex flex-wrap gap-2">
               {/* Available tags */}
               {allTags.filter(t => !formData.tags?.includes(t)).map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleAddTag(tag)}
-                  className="text-[10px] px-2 py-1 bg-[#2a2a2a] text-white border-[2px] border-[#3a3a3a] rounded cursor-pointer transition-all duration-150 hover:bg-[var(--brand-yellow)] hover:text-black hover:border-black"
-                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-                >
-                  + #{tag}
-                </button>
+                <div key={tag} className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleAddTag(tag)}
+                    className="text-[10px] px-2 py-1 bg-[#2a2a2a] text-white border-[2px] border-[#3a3a3a] rounded cursor-pointer transition-all duration-150 hover:bg-[var(--brand-yellow)] hover:text-black hover:border-black"
+                    style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                  >
+                    + #{tag}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete tag "${tag}" everywhere? This removes it from all tasks.`)) {
+                        onDeleteTag(tag);
+                        toast.success(`Deleted #${tag} globally`);
+                      }
+                    }}
+                    className="p-1 text-white/40 hover:text-[var(--brand-red)]"
+                    title="Delete tag globally"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
             {/* Custom tag input */}
@@ -549,18 +631,11 @@ function TaskModalContent({
                   key={st.id}
                   className="flex items-center gap-2 p-2 bg-[#2a2a2a] border-[2px] border-[#3a3a3a] rounded-lg group"
                 >
-                  <div
-                    onClick={() => handleToggleSubtask(st.id)}
-                    className={cn(
-                      "w-5 h-5 border-[2px] border-[#3a3a3a] rounded-[4px] flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-150",
-                      st.done ? "bg-[var(--brand-green)] border-[var(--brand-green)] text-white" : "bg-[#1a1a1a]"
-                    )}
-                  >
-                    {st.done && <span className="text-[10px] font-bold">✓</span>}
-                  </div>
-                  <span className={cn("flex-1 text-sm text-white", st.done && "line-through text-white/40")}>
-                    {st.text}
-                  </span>
+                  <input
+                    value={st.text}
+                    onChange={(e) => handleEditSubtask(st.id, e.target.value)}
+                    className="flex-1 text-sm text-white bg-transparent border border-white/10 rounded px-2 py-1 outline-none focus:border-[var(--brand-blue)]"
+                  />
                   <button
                     onClick={() => handleRemoveSubtask(st.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--brand-red)] hover:text-white rounded transition-all duration-150 text-white/40"
@@ -632,4 +707,3 @@ function TaskModalContent({
     </div>
   );
 }
-
