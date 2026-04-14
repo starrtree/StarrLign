@@ -26,7 +26,7 @@ const EMOJIS = [
 
 interface ProjectModalContentProps {
   editingProjectId: string | null;
-  editingProject: { id: string; name: string; color: string; icon: string; due: string; category: string | null } | null;
+  editingProject: { id: string; name: string; color: string; icon: string; due: string; startDate: string; endDate: string; category: string | null } | null;
   onClose: () => void;
 }
 
@@ -38,6 +38,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const [color, setColor] = useState(editingProject?.color || 'blue');
   const [icon, setIcon] = useState(editingProject?.icon || '📁');
   const [due, setDue] = useState(editingProject?.due || '');
+  const [startDate, setStartDate] = useState(editingProject?.startDate || '');
+  const [endDate, setEndDate] = useState(editingProject?.endDate || '');
   const [category, setCategory] = useState<string | null>(editingProject?.category || null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -59,6 +61,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         name: name.trim(), 
         color, 
         icon,
+        startDate,
+        endDate,
         due,
         category
       });
@@ -68,6 +72,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         name: name.trim(),
         color,
         icon,
+        startDate,
+        endDate,
         due,
         category,
         order: projects.length,
@@ -247,6 +253,31 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
                 IDK
               </span>
             </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] text-[var(--gray-500)] mb-1 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2.5 border-[2px] border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] text-[var(--gray-500)] mb-1 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Event / End
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2.5 border-[2px] border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] transition-all"
+            />
           </div>
         </div>
 
@@ -525,6 +556,8 @@ export default function ProjectModal() {
           name: editingProject.name,
           color: editingProject.color,
           icon: editingProject.icon,
+          startDate: editingProject.startDate || '',
+          endDate: editingProject.endDate || '',
           due: editingProject.due,
           category: editingProject.category
         } : null}

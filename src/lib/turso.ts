@@ -68,6 +68,8 @@ export async function initializeDatabase() {
       linkedProjects TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
+      startDate TEXT,
+      endDate TEXT,
       due TEXT,
       durationHours INTEGER DEFAULT 0,
       durationMinutes INTEGER DEFAULT 0,
@@ -86,6 +88,12 @@ export async function initializeDatabase() {
   } catch {
     // Column already exists on upgraded databases.
   }
+  try {
+    await turso.execute(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
+  } catch {}
+  try {
+    await turso.execute(`ALTER TABLE tasks ADD COLUMN endDate TEXT`);
+  } catch {}
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -95,6 +103,8 @@ export async function initializeDatabase() {
       icon TEXT DEFAULT 'folder',
       tasks INTEGER DEFAULT 0,
       completed INTEGER DEFAULT 0,
+      startDate TEXT,
+      endDate TEXT,
       due TEXT,
       "order" INTEGER DEFAULT 0,
       isArchived INTEGER DEFAULT 0,
@@ -103,6 +113,12 @@ export async function initializeDatabase() {
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  try {
+    await turso.execute(`ALTER TABLE projects ADD COLUMN startDate TEXT`);
+  } catch {}
+  try {
+    await turso.execute(`ALTER TABLE projects ADD COLUMN endDate TEXT`);
+  } catch {}
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS project_categories (

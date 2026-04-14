@@ -12,6 +12,8 @@ export interface Task {
   linkedProjects: string[];
   priority: 'high' | 'medium' | 'low';
   status: 'todo' | 'doing' | 'review' | 'done';
+  startDate: string;
+  endDate: string;
   due: string;
   durationHours: number;
   durationMinutes: number;
@@ -30,6 +32,8 @@ export interface Project {
   icon: string;
   tasks: number;
   completed: number;
+  startDate: string;
+  endDate: string;
   due: string;
   order: number;
   isArchived: boolean;

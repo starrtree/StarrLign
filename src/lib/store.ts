@@ -13,6 +13,8 @@ const initialTasks: Task[] = [
     linkedProjects: ['Your Journey'],
     priority: 'high',
     status: 'doing',
+    startDate: '',
+    endDate: '',
     due: '',
     durationHours: 0,
     durationMinutes: 30,
@@ -30,7 +32,7 @@ const initialTasks: Task[] = [
 
 // Initial projects data - single template project
 const initialProjects: Project[] = [
-  { id: 'p1', name: 'Your Journey', color: 'yellow', icon: '⭐', tasks: 1, completed: 0, due: 'Now', order: 0, isArchived: false, category: null },
+  { id: 'p1', name: 'Your Journey', color: 'yellow', icon: '⭐', tasks: 1, completed: 0, startDate: '', endDate: '', due: 'Now', order: 0, isArchived: false, category: null },
 ];
 
 // Initial project categories
@@ -760,6 +762,8 @@ export const createNewProject = (overrides: Partial<Project> = {}): Project => (
   icon: '📁',
   tasks: 0,
   completed: 0,
+  startDate: '',
+  endDate: '',
   due: 'Ongoing',
   order: 0,
   isArchived: false,
@@ -775,6 +779,8 @@ export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
   linkedProjects: ['Your Journey'],
   priority: 'medium',
   status: 'todo',
+  startDate: '',
+  endDate: '',
   due: '',
   durationHours: 0,
   durationMinutes: 30,

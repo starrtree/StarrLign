@@ -67,6 +67,8 @@ async function initializeRemoteDatabase() {
       linkedProjects TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
+      startDate TEXT,
+      endDate TEXT,
       due TEXT,
       durationHours INTEGER DEFAULT 0,
       durationMinutes INTEGER DEFAULT 0,
@@ -85,6 +87,12 @@ async function initializeRemoteDatabase() {
   } catch {
     // column already exists
   }
+  try {
+    await remoteClient.execute(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
+  } catch {}
+  try {
+    await remoteClient.execute(`ALTER TABLE tasks ADD COLUMN endDate TEXT`);
+  } catch {}
 
   await remoteClient.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -94,6 +102,8 @@ async function initializeRemoteDatabase() {
       icon TEXT DEFAULT 'folder',
       tasks INTEGER DEFAULT 0,
       completed INTEGER DEFAULT 0,
+      startDate TEXT,
+      endDate TEXT,
       due TEXT,
       "order" INTEGER DEFAULT 0,
       isArchived INTEGER DEFAULT 0,
@@ -102,6 +112,12 @@ async function initializeRemoteDatabase() {
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  try {
+    await remoteClient.execute(`ALTER TABLE projects ADD COLUMN startDate TEXT`);
+  } catch {}
+  try {
+    await remoteClient.execute(`ALTER TABLE projects ADD COLUMN endDate TEXT`);
+  } catch {}
 
   await remoteClient.execute(`
     CREATE TABLE IF NOT EXISTS project_categories (
@@ -149,6 +165,8 @@ async function readSnapshot() {
       linkedProjects: parseJson(row.linkedProjects, row.project ? [String(row.project)] : []),
       priority: row.priority ? String(row.priority) : 'medium',
       status: row.status ? String(row.status) : 'todo',
+      startDate: row.startDate ? String(row.startDate) : '',
+      endDate: row.endDate ? String(row.endDate) : '',
       due: row.due ? String(row.due) : '',
       durationHours: Number(row.durationHours ?? 0),
       durationMinutes: Number(row.durationMinutes ?? 0),
@@ -165,6 +183,8 @@ async function readSnapshot() {
       icon: row.icon ? String(row.icon) : 'folder',
       tasks: Number(row.tasks ?? 0),
       completed: Number(row.completed ?? 0),
+      startDate: row.startDate ? String(row.startDate) : '',
+      endDate: row.endDate ? String(row.endDate) : '',
       due: row.due ? String(row.due) : '',
       order: Number(row.order ?? 0),
       isArchived: Boolean(row.isArchived),
@@ -199,7 +219,7 @@ async function writeSnapshot(snapshot) {
 
   for (const task of snapshot.tasks) {
     batchStatements.push({
-      sql: 'INSERT INTO tasks (id, title, project, linkedProjects, priority, status, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO tasks (id, title, project, linkedProjects, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         task.id,
         task.title,
@@ -207,6 +227,8 @@ async function writeSnapshot(snapshot) {
         JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
         task.priority,
         task.status,
+        task.startDate || null,
+        task.endDate || null,
         task.due || null,
         task.durationHours || 0,
         task.durationMinutes || 0,
@@ -221,7 +243,7 @@ async function writeSnapshot(snapshot) {
 
   for (const project of snapshot.projects) {
     batchStatements.push({
-      sql: 'INSERT INTO projects (id, name, color, icon, tasks, completed, due, "order", isArchived, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO projects (id, name, color, icon, tasks, completed, startDate, endDate, due, "order", isArchived, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         project.id,
         project.name,
@@ -229,6 +251,8 @@ async function writeSnapshot(snapshot) {
         project.icon || 'folder',
         project.tasks || 0,
         project.completed || 0,
+        project.startDate || null,
+        project.endDate || null,
         project.due || null,
         project.order || 0,
         project.isArchived ? 1 : 0,

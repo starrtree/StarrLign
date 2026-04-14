@@ -422,10 +422,10 @@ export default function ProjectView() {
   };
 
   // List Item Component
-  const TaskListItem = ({ task }: { task: Task }) => {
+  const TaskListItem = ({ task, muted = false }: { task: Task; muted?: boolean }) => {
     const duration = formatDuration(task.durationHours, task.durationMinutes);
-    const textColor = selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
-    const textColorMuted = selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
+    const textColor = muted ? 'text-black/80' : selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
+    const textColorMuted = muted ? 'text-black/50' : selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
     
     const handleQuickMove = (newStatus: Task['status']) => {
       updateTask(task.id, { status: newStatus });
@@ -742,9 +742,9 @@ export default function ProjectView() {
             <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
             <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
           </button>
-          <div className="divide-y divide-black/20 bg-white/40">
+          <div className="divide-y divide-black/20 bg-[var(--brand-green)]/10">
             {(showCompleted ? completedProjectTasks : completedProjectTasks.slice(0, 3)).map((task) => (
-              <TaskListItem key={task.id} task={task} />
+              <TaskListItem key={task.id} task={task} muted />
             ))}
             {!showCompleted && completedProjectTasks.length > 3 && (
               <div className="px-4 py-2 text-[11px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
