@@ -219,6 +219,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateTask: (id, updates) => {
+<<<<<<< codex/inspect-repo-for-diagnostics-and-issues-xut609
     let completedProjects: string[] = [];
     set((state) => {
       let previousTask: Task | null = null;
@@ -254,6 +255,59 @@ export const useStore = create<AppState>((set, get) => ({
         window.dispatchEvent(new CustomEvent('starrlign:project-complete', { detail: { projectName } }));
       });
     }
+    saveToDatabase(get());
+  },
+
+  reorderTasksInProject: (projectName, draggedTaskId, targetTaskId) => {
+    if (draggedTaskId === targetTaskId) return;
+    set((state) => {
+      const projectTaskIds = state.tasks
+        .filter(
+          (task) =>
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+        )
+        .map((task) => task.id);
+
+      const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
+      const targetIndex = projectTaskIds.indexOf(targetTaskId);
+      if (sourceIndex === -1 || targetIndex === -1) return state;
+
+      const reorderedIds = [...projectTaskIds];
+      const [moved] = reorderedIds.splice(sourceIndex, 1);
+      reorderedIds.splice(targetIndex, 0, moved);
+
+      const taskById = new Map(state.tasks.map((task) => [task.id, task]));
+      const reorderedProjectTasks = reorderedIds
+        .map((id) => taskById.get(id))
+        .filter((task): task is Task => Boolean(task));
+
+      const nonProjectTasks = state.tasks.filter(
+        (task) =>
+          !(
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+          )
+      );
+
+      return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
+    });
+=======
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === id
+          ? (() => {
+              const nextTask = { ...task, ...updates } as Task;
+              const normalizedLinkedProjects =
+                nextTask.linkedProjects && nextTask.linkedProjects.length > 0
+                  ? Array.from(new Set([nextTask.project, ...nextTask.linkedProjects]))
+                  : [nextTask.project];
+              return { ...nextTask, linkedProjects: normalizedLinkedProjects };
+            })()
+          : task
+      ),
+    }));
+>>>>>>> main
     saveToDatabase(get());
   },
 
