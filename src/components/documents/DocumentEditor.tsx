@@ -142,6 +142,27 @@ export default function DocumentEditor() {
     triggerSave();
   };
 
+  const handleTextBlockPaste = (e: React.ClipboardEvent<HTMLDivElement>, blockId: string) => {
+    const items = Array.from(e.clipboardData.items || []);
+    const imageItem = items.find((item) => item.type.startsWith('image/'));
+    if (!imageItem) return;
+
+    e.preventDefault();
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (!dataUrl) return;
+      const html = `<img src="${dataUrl}" alt="Pasted image" style="max-width:100%;border-radius:8px;margin:8px 0;" />`;
+      document.execCommand('insertHTML', false, html);
+      const target = e.currentTarget;
+      handleBlockContentChange(blockId, target.innerHTML || '');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Handle block delete
   const handleDeleteBlock = (blockId: string) => {
     if (!doc) return;
@@ -641,6 +662,7 @@ export default function DocumentEditor() {
                             setShowBlockPicker(block.id);
                           }
                         }}
+                        onPaste={(e) => handleTextBlockPaste(e, block.id)}
                         className="text-[15px] leading-relaxed text-black outline-none min-h-[1.5em]"
                         data-placeholder="Start writing…"
                         dangerouslySetInnerHTML={{ __html: block.content || '' }}

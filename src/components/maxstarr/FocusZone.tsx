@@ -86,6 +86,9 @@ export default function FocusZone() {
       updateTask(focusTask.id, { status: 'done', progress: 100 });
       toast.success('Mission completed! 🎉');
       playAppSound('taskComplete', soundEnabled);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
+      }
     }
   };
 
@@ -525,8 +528,9 @@ export default function FocusZone() {
                 {/* Glass-style Checkbox */}
                 <div
                   onClick={() => {
+                    const wasDone = subtask.done;
                     toggleSubtask(focusTask.id, subtask.id);
-                    playAppSound('subtaskToggle', soundEnabled);
+                    playAppSound(wasDone ? 'subtaskToggle' : 'subtaskComplete', soundEnabled);
                   }}
                   className={cn(
                     "w-5 h-5 border-[2px] rounded-md flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 transform hover:scale-110",
