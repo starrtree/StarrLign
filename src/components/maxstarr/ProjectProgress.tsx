@@ -21,7 +21,11 @@ export default function ProjectProgress() {
   const projectProgress = projects
     .filter(p => !p.isArchived)
     .map(project => {
-      const projectTasks = tasks.filter(t => t.project === project.name && !t.isArchived);
+      const projectTasks = tasks.filter(
+        (t) =>
+          !t.isArchived &&
+          (t.project === project.name || (t.linkedProjects || []).includes(project.name))
+      );
       const totalTasks = projectTasks.length;
       const completedTasks = projectTasks.filter(t => t.status === 'done').length;
       const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -85,4 +89,3 @@ export default function ProjectProgress() {
     </div>
   );
 }
-

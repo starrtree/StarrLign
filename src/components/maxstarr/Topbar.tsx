@@ -52,7 +52,7 @@ export default function Topbar() {
       
       {/* Title */}
       <h1
-        className="text-lg md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 truncate"
+        className="text-base md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 overflow-x-auto whitespace-nowrap no-scrollbar"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
@@ -76,10 +76,12 @@ export default function Topbar() {
       {showNewTaskButton && (
         <button
           onClick={handleNewProject}
-          className="px-3 md:px-4 py-2 bg-[var(--brand-yellow)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap"
+          className="inline-flex items-center justify-center md:justify-start px-2.5 md:px-4 py-2 bg-[var(--brand-yellow)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap"
           style={{ fontFamily: 'var(--font-space-mono), monospace', color: isDark ? '#000000' : '#ffffff' }}
+          title="Create new project"
         >
-          + NEW PROJECT
+          <span className="hidden md:inline">+ NEW PROJECT</span>
+          <Plus className="w-4 h-4 md:hidden" />
         </button>
       )}
 
@@ -90,10 +92,10 @@ export default function Topbar() {
           className="px-3 md:px-4 py-2 bg-[var(--brand-red)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap btn-shine"
           style={{ fontFamily: 'var(--font-space-mono), monospace', color: isDark ? '#000000' : '#ffffff' }}
         >
-          + NEW TASK
+          <span className="hidden sm:inline">+ NEW TASK</span>
+          <span className="sm:hidden">+ TASK</span>
         </button>
       )}
     </header>
   );
 }
-
