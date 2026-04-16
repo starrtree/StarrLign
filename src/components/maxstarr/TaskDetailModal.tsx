@@ -75,7 +75,6 @@ export default function TaskDetailModal() {
     if (task) {
       updateTask(task.id, { status: 'done', progress: 100 });
       toast.success('Task completed! 🎉');
-      playAppSound('taskComplete', soundEnabled);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('starrlign:task-complete'));
       }
@@ -106,7 +105,11 @@ export default function TaskDetailModal() {
         st.id === subtaskId ? { ...st, done: !st.done } : st
       );
       updateTask(task.id, { subtasks: updatedSubtasks });
-      playAppSound(currentSubtask?.done ? 'subtaskToggle' : 'subtaskComplete', soundEnabled);
+      if (currentSubtask?.done) {
+        playAppSound('subtaskToggle', soundEnabled);
+      } else if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:subtask-complete'));
+      }
     }
   };
 

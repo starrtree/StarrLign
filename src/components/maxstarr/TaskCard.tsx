@@ -5,6 +5,7 @@ import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Clock, Pencil, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface TaskCardProps {
   task: Task;
@@ -30,6 +31,7 @@ function getDeadlineStatus(due: string | undefined): 'overdue' | 'approaching' |
 
 export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode } = useStore();
+  const [isCelebrating, setIsCelebrating] = useState(false);
   
   // Get project color
   const project = projects.find(p => p.name === task.project);
@@ -54,6 +56,8 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
     e.stopPropagation();
     updateTask(task.id, { status: newStatus });
     if (newStatus === 'done' && typeof window !== 'undefined') {
+      setIsCelebrating(true);
+      setTimeout(() => setIsCelebrating(false), 1400);
       window.dispatchEvent(new Event('starrlign:task-complete'));
     }
     toast.success(`Task moved to ${newStatus.toUpperCase()}`);
@@ -85,7 +89,8 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
         "border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]",
         task.status === 'done' && "opacity-70 saturate-50",
         deadlineStatus === 'overdue' && "border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1",
-        deadlineStatus === 'approaching' && "border-[var(--brand-red)]"
+        deadlineStatus === 'approaching' && "border-[var(--brand-red)]",
+        isCelebrating && "card-gyrate"
       )}
       style={{ backgroundColor: colors.bg }}
       draggable

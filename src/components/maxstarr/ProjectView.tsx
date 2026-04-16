@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore, formatDuration, formatRelativeTime, calculateWordCount } from '@/lib/store';
 import { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -37,7 +37,19 @@ export default function ProjectView() {
   const [viewMode, setViewMode] = useState<ViewMode>('modular');
   const [showFilters, setShowFilters] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [dancingProjectName, setDancingProjectName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onProjectComplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectName?: string }>).detail;
+      if (!detail?.projectName) return;
+      setDancingProjectName(detail.projectName);
+      setTimeout(() => setDancingProjectName(null), 1600);
+    };
+    window.addEventListener('starrlign:project-complete', onProjectComplete);
+    return () => window.removeEventListener('starrlign:project-complete', onProjectComplete);
+  }, []);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
   const taskBelongsToProject = (task: Task, projectName: string) =>
@@ -166,7 +178,8 @@ export default function ProjectView() {
         onClick={() => setSelectedProjectId(project.id)}
         className={cn(
           "p-5 border-[2px] border-black rounded-lg cursor-pointer transition-all duration-200 hover:shadow-[5px_5px_0_black] hover:translate-y-[-2px] group relative",
-          hasApproachingDeadline && "ring-2 ring-[var(--brand-red)] ring-offset-1"
+          hasApproachingDeadline && "ring-2 ring-[var(--brand-red)] ring-offset-1",
+          dancingProjectName === project.name && "card-gyrate"
         )}
         style={{ 
           backgroundColor: cardColor,
@@ -585,7 +598,10 @@ export default function ProjectView() {
             </button>
             <span className="text-xl">{selectedProject.icon}</span>
             <h2
-              className="text-base md:text-xl text-[var(--brand-yellow)] tracking-wide whitespace-nowrap overflow-x-auto no-scrollbar min-w-0"
+              className={cn(
+                "text-base md:text-xl text-[var(--brand-yellow)] tracking-wide whitespace-nowrap overflow-x-auto no-scrollbar min-w-0",
+                dancingProjectName === selectedProject.name && "card-gyrate"
+              )}
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {selectedProject.name}
@@ -742,16 +758,13 @@ export default function ProjectView() {
             <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
             <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
           </button>
-          <div className="divide-y divide-black/20 bg-[var(--brand-green)]/10">
-            {(showCompleted ? completedProjectTasks : completedProjectTasks.slice(0, 3)).map((task) => (
-              <TaskListItem key={task.id} task={task} muted />
-            ))}
-            {!showCompleted && completedProjectTasks.length > 3 && (
-              <div className="px-4 py-2 text-[11px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                +{completedProjectTasks.length - 3} more hidden
-              </div>
-            )}
-          </div>
+          {showCompleted && (
+            <div className="divide-y divide-black/20 bg-[var(--brand-green)]/10">
+              {completedProjectTasks.map((task) => (
+                <TaskListItem key={task.id} task={task} muted />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

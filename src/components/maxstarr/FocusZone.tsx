@@ -5,7 +5,7 @@ import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Plus, Trash2, ExternalLink, Check, FolderOpen, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, PanInfo, motion, useMotionValue, useTransform } from 'framer-motion';
 import { playAppSound } from '@/lib/sound';
 
 export default function FocusZone() {
@@ -47,6 +47,7 @@ export default function FocusZone() {
   const [editingSubtaskText, setEditingSubtaskText] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [isCardCelebrating, setIsCardCelebrating] = useState(false);
 
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const newSubtaskRef = useRef<HTMLInputElement>(null);
@@ -85,7 +86,8 @@ export default function FocusZone() {
     if (focusTask) {
       updateTask(focusTask.id, { status: 'done', progress: 100 });
       toast.success('Mission completed! 🎉');
-      playAppSound('taskComplete', soundEnabled);
+      setIsCardCelebrating(true);
+      setTimeout(() => setIsCardCelebrating(false), 1450);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('starrlign:task-complete'));
       }
@@ -109,6 +111,11 @@ export default function FocusZone() {
       if (next >= activeFocusTasks.length) return 0;
       return next;
     });
+  };
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (Math.abs(info.offset.x) < 75 && Math.abs(info.velocity.x) < 450) return;
+    handleSwipeTask(info.offset.x > 0 ? -1 : 1);
   };
 
   const handleSelectTask = () => {
@@ -320,6 +327,8 @@ export default function FocusZone() {
 
   const duration = formatDuration(focusTask.durationHours, focusTask.durationMinutes);
   const textColor = projectColor === 'yellow' ? 'black' : 'white';
+  const swipeX = useMotionValue(0);
+  const swipeRotate = useTransform(swipeX, [-260, 0, 260], [-10, 0, 10]);
 
   return (
     <div
@@ -337,7 +346,8 @@ export default function FocusZone() {
       }}
       className={cn(
         "border-[3px] border-black rounded-lg p-4 md:p-8 mb-6 md:mb-8 relative transition-all duration-500 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] gap-6 md:gap-8",
-        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]"
+        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]",
+        isCardCelebrating && "card-gyrate"
       )}
       style={{
         backgroundColor: mainColor,
@@ -369,7 +379,14 @@ export default function FocusZone() {
           initial={{ x: swipeDirection * 80, opacity: 0.4, scale: 0.98 }}
           animate={{ x: 0, opacity: 1, scale: 1 }}
           exit={{ x: swipeDirection * -80, opacity: 0.2, scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+          transition={{ type: 'spring', stiffness: 250, damping: 24, mass: 0.95 }}
+          drag={activeFocusTasks.length > 1 ? 'x' : false}
+          dragElastic={0.18}
+          dragMomentum
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+          style={{ x: swipeX, rotate: swipeRotate }}
+          whileDrag={{ scale: 1.015, cursor: 'grabbing' }}
           className="contents"
         >
       {/* LEFT: Notes */}
@@ -530,7 +547,11 @@ export default function FocusZone() {
                   onClick={() => {
                     const wasDone = subtask.done;
                     toggleSubtask(focusTask.id, subtask.id);
-                    playAppSound(wasDone ? 'subtaskToggle' : 'subtaskComplete', soundEnabled);
+                    if (wasDone) {
+                      playAppSound('subtaskToggle', soundEnabled);
+                    } else if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new Event('starrlign:subtask-complete'));
+                    }
                   }}
                   className={cn(
                     "w-5 h-5 border-[2px] rounded-md flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 transform hover:scale-110",
