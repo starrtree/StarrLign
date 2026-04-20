@@ -86,8 +86,33 @@ export interface Document {
   isArchived: boolean;
 }
 
+export interface Budget {
+  id: string;
+  name: string;
+  limit: number;
+}
+
+export interface MoneyEntry {
+  id: string;
+  title: string;
+  amount: number;
+  type: 'income' | 'expense' | 'investment';
+  category: 'work' | 'saving' | 'personal' | string;
+  date: string;
+  linkedTaskId?: string | null;
+  includedInBudget: boolean;
+}
+
+export interface InvestmentPosition {
+  id: string;
+  symbol: string;
+  shares: number;
+  avgCost: number;
+  currentPrice: number;
+}
+
 // View types
-export type ViewType = 'dashboard' | 'kanban' | 'documents' | 'projects' | 'archive';
+export type ViewType = 'dashboard' | 'kanban' | 'documents' | 'projects' | 'archive' | 'money' | 'calendar';
 
 // App state
 export interface AppState {
@@ -100,6 +125,10 @@ export interface AppState {
   projectFilter: 'active' | 'archived' | 'all' | string;
   tags: string[];
   documents: Document[];
+  budgets: Budget[];
+  moneyEntries: MoneyEntry[];
+  investmentPositions: InvestmentPosition[];
+  baseIncomeMonthly: number;
   editingTaskId: string | null;
   isModalOpen: boolean;
   isDetailMode: boolean;
@@ -143,6 +172,19 @@ export interface AppState {
   archiveDocument: (id: string) => void;
   restoreDocument: (id: string) => void;
   duplicateDocument: (id: string) => void;
+
+  // Money actions
+  addBudget: (budget: Budget) => void;
+  updateBudget: (id: string, updates: Partial<Budget>) => void;
+  deleteBudget: (id: string) => void;
+  addMoneyEntry: (entry: MoneyEntry) => void;
+  updateMoneyEntry: (id: string, updates: Partial<MoneyEntry>) => void;
+  deleteMoneyEntry: (id: string) => void;
+  setMoneyEntryIncluded: (id: string, includedInBudget: boolean) => void;
+  setBaseIncomeMonthly: (amount: number) => void;
+  addInvestmentPosition: (position: InvestmentPosition) => void;
+  updateInvestmentPosition: (id: string, updates: Partial<InvestmentPosition>) => void;
+  deleteInvestmentPosition: (id: string) => void;
   
   // Block actions
   addBlock: (docId: string, block: Block, afterBlockId?: string) => void;

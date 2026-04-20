@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType, ProjectCategory } from './types';
+import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType, ProjectCategory, Budget, MoneyEntry, InvestmentPosition } from './types';
 
 // UUID generator
 const uuid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -81,12 +81,25 @@ const initialDocuments: Document[] = [
   },
 ];
 
+const initialBudgets: Budget[] = [
+  { id: 'b-work', name: 'Work', limit: 3000 },
+  { id: 'b-saving', name: 'Saving', limit: 1200 },
+  { id: 'b-personal', name: 'Personal', limit: 900 },
+];
+
+const initialMoneyEntries: MoneyEntry[] = [];
+const initialInvestmentPositions: InvestmentPosition[] = [];
+
 type DatabaseSnapshot = {
   tasks: Task[];
   projects: Project[];
   projectCategories: ProjectCategory[];
   documents: Document[];
   tags: string[];
+  budgets: Budget[];
+  moneyEntries: MoneyEntry[];
+  investmentPositions: InvestmentPosition[];
+  baseIncomeMonthly: number;
 };
 
 const initialDatabaseSnapshot: DatabaseSnapshot = {
@@ -95,6 +108,10 @@ const initialDatabaseSnapshot: DatabaseSnapshot = {
   projectCategories: initialProjectCategories,
   documents: initialDocuments,
   tags: initialTags,
+  budgets: initialBudgets,
+  moneyEntries: initialMoneyEntries,
+  investmentPositions: initialInvestmentPositions,
+  baseIncomeMonthly: 0,
 };
 
 const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => ({
@@ -117,6 +134,10 @@ const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => 
     })),
   })),
   tags: [...snapshot.tags],
+  budgets: (snapshot.budgets || []).map((budget) => ({ ...budget })),
+  moneyEntries: (snapshot.moneyEntries || []).map((entry) => ({ ...entry })),
+  investmentPositions: (snapshot.investmentPositions || []).map((position) => ({ ...position })),
+  baseIncomeMonthly: snapshot.baseIncomeMonthly || 0,
 });
 
 const createDefaultSnapshot = (): DatabaseSnapshot => cloneDatabaseSnapshot(initialDatabaseSnapshot);
@@ -127,7 +148,10 @@ const isDatabaseSnapshotEmpty = (snapshot: DatabaseSnapshot): boolean => {
     snapshot.projects.length === 0 &&
     snapshot.projectCategories.length === 0 &&
     snapshot.documents.length === 0 &&
-    snapshot.tags.length === 0
+    snapshot.tags.length === 0 &&
+    (snapshot.budgets?.length || 0) === 0 &&
+    (snapshot.moneyEntries?.length || 0) === 0 &&
+    (snapshot.investmentPositions?.length || 0) === 0
   );
 };
 
@@ -157,6 +181,10 @@ const saveToDatabase = async (state: AppState) => {
         projectCategories: state.projectCategories,
         documents: state.documents,
         tags: state.tags,
+        budgets: state.budgets,
+        moneyEntries: state.moneyEntries,
+        investmentPositions: state.investmentPositions,
+        baseIncomeMonthly: state.baseIncomeMonthly,
       });
       console.log('Data saved to database');
     } catch (error) {
@@ -191,6 +219,10 @@ export const useStore = create<AppState>((set, get) => ({
   projectFilter: 'active',
   tags: initialTags,
   documents: initialDocuments,
+  budgets: initialBudgets,
+  moneyEntries: initialMoneyEntries,
+  investmentPositions: initialInvestmentPositions,
+  baseIncomeMonthly: 0,
   editingTaskId: null,
   isModalOpen: false,
   isDetailMode: false,
@@ -520,6 +552,72 @@ export const useStore = create<AppState>((set, get) => ({
     saveToDatabase(get());
   },
 
+  // Money actions
+  addBudget: (budget) => {
+    set((state) => ({ budgets: [...state.budgets, budget] }));
+    saveToDatabase(get());
+  },
+
+  updateBudget: (id, updates) => {
+    set((state) => ({
+      budgets: state.budgets.map((budget) => (budget.id === id ? { ...budget, ...updates } : budget)),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteBudget: (id) => {
+    set((state) => ({ budgets: state.budgets.filter((budget) => budget.id !== id) }));
+    saveToDatabase(get());
+  },
+
+  addMoneyEntry: (entry) => {
+    set((state) => ({ moneyEntries: [...state.moneyEntries, entry] }));
+    saveToDatabase(get());
+  },
+
+  updateMoneyEntry: (id, updates) => {
+    set((state) => ({
+      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry)),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteMoneyEntry: (id) => {
+    set((state) => ({ moneyEntries: state.moneyEntries.filter((entry) => entry.id !== id) }));
+    saveToDatabase(get());
+  },
+
+  setMoneyEntryIncluded: (id, includedInBudget) => {
+    set((state) => ({
+      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, includedInBudget } : entry)),
+    }));
+    saveToDatabase(get());
+  },
+
+  setBaseIncomeMonthly: (amount) => {
+    set({ baseIncomeMonthly: Math.max(0, amount || 0) });
+    saveToDatabase(get());
+  },
+
+  addInvestmentPosition: (position) => {
+    set((state) => ({ investmentPositions: [...state.investmentPositions, position] }));
+    saveToDatabase(get());
+  },
+
+  updateInvestmentPosition: (id, updates) => {
+    set((state) => ({
+      investmentPositions: state.investmentPositions.map((position) =>
+        position.id === id ? { ...position, ...updates } : position
+      ),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteInvestmentPosition: (id) => {
+    set((state) => ({ investmentPositions: state.investmentPositions.filter((position) => position.id !== id) }));
+    saveToDatabase(get());
+  },
+
   // Block actions
   addBlock: (docId, block, afterBlockId) => {
     set((state) => ({
@@ -737,6 +835,10 @@ export const useStore = create<AppState>((set, get) => ({
       projectFilter: 'active',
       tags: defaultSnapshot.tags,
       documents: defaultSnapshot.documents,
+      budgets: defaultSnapshot.budgets,
+      moneyEntries: defaultSnapshot.moneyEntries,
+      investmentPositions: defaultSnapshot.investmentPositions,
+      baseIncomeMonthly: defaultSnapshot.baseIncomeMonthly || 0,
       editingTaskId: null,
       isModalOpen: false,
       isDetailMode: false,
@@ -763,6 +865,10 @@ export const useStore = create<AppState>((set, get) => ({
       projectCategories: snapshot.projectCategories,
       documents: snapshot.documents,
       tags: snapshot.tags,
+      budgets: snapshot.budgets || initialBudgets,
+      moneyEntries: snapshot.moneyEntries || [],
+      investmentPositions: snapshot.investmentPositions || [],
+      baseIncomeMonthly: snapshot.baseIncomeMonthly || 0,
     });
 
     if (isDatabaseSnapshotEmpty(data)) {

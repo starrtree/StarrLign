@@ -9,6 +9,8 @@ const viewTitles: Record<string, string> = {
   kanban: 'ALL TASKS',
   documents: 'DOCUMENTS',
   projects: 'PROJECTS',
+  money: 'MONEY LAB',
+  calendar: 'CALENDAR',
   archive: 'SACRIFICE PIT',
 };
 
