@@ -437,8 +437,12 @@ export default function ProjectView() {
   // List Item Component
   const TaskListItem = ({ task, muted = false }: { task: Task; muted?: boolean }) => {
     const duration = formatDuration(task.durationHours, task.durationMinutes);
-    const textColor = muted ? 'text-black/80' : selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
-    const textColorMuted = muted ? 'text-black/50' : selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
+    const textColor = muted
+      ? 'text-[color:var(--completed-text,#111)]'
+      : selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
+    const textColorMuted = muted
+      ? 'text-[color:var(--completed-text-muted,rgba(17,17,17,0.7))]'
+      : selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
     
     const handleQuickMove = (newStatus: Task['status']) => {
       updateTask(task.id, { status: newStatus });
@@ -738,8 +742,15 @@ export default function ProjectView() {
           <div className="divide-y divide-black/20">
             {activeProjectTasks
               .sort((a, b) => {
-                const statusOrder = { doing: 0, todo: 1, review: 2, done: 3 };
-                return statusOrder[a.status] - statusOrder[b.status];
+                const statusOrder = { doing: 0, review: 1, todo: 2, done: 3 };
+                const priorityOrder = { high: 0, medium: 1, low: 2 };
+                const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+                if (statusDiff !== 0) return statusDiff;
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                if (priorityDiff !== 0) return priorityDiff;
+                const aDate = a.due && a.due !== 'idk yet' && a.due !== 'Ongoing' ? new Date(a.due).getTime() : Number.MAX_SAFE_INTEGER;
+                const bDate = b.due && b.due !== 'idk yet' && b.due !== 'Ongoing' ? new Date(b.due).getTime() : Number.MAX_SAFE_INTEGER;
+                return aDate - bDate;
               })
               .map(task => (
                 <TaskListItem key={task.id} task={task} />
@@ -759,7 +770,10 @@ export default function ProjectView() {
             <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
           </button>
           {showCompleted && (
-            <div className="divide-y divide-black/20 bg-[var(--brand-green)]/10">
+            <div
+              className="divide-y divide-black/20 bg-[var(--brand-green)]/10 dark:bg-[#0f2d16]"
+              style={{ ['--completed-text' as string]: '#b6f5c9', ['--completed-text-muted' as string]: '#8dd6a4' }}
+            >
               {completedProjectTasks.map((task) => (
                 <TaskListItem key={task.id} task={task} muted />
               ))}

@@ -21,6 +21,9 @@ export interface Task {
   progress: number;
   notes: string;
   subtasks: Subtask[];
+  timerStartedAt?: string | null;
+  lastTimerStartAt?: string | null;
+  lastTimerEndAt?: string | null;
   isArchived: boolean;
 }
 

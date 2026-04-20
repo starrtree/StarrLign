@@ -51,6 +51,9 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const colors = colorMap[projectColor] || colorMap.yellow;
   const deadlineStatus = getDeadlineStatus(task.due);
   const duration = formatDuration(task.durationHours, task.durationMinutes);
+  const subtaskProgress = task.subtasks?.length
+    ? Math.round((task.subtasks.filter((subtask) => subtask.done).length / task.subtasks.length) * 100)
+    : 0;
 
   const handleQuickMove = (newStatus: Task['status'], e: React.MouseEvent) => {
     e.stopPropagation();
@@ -200,6 +203,18 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           </span>
         )}
       </div>
+
+      {task.subtasks?.length > 0 && (
+        <div className="mt-2">
+          <div className="flex justify-between text-[9px] font-bold mb-1" style={{ color: colors.textMuted, fontFamily: 'var(--font-space-mono), monospace' }}>
+            <span>SUBTASKS</span>
+            <span>{subtaskProgress}%</span>
+          </div>
+          <div className="h-1.5 rounded bg-black/25 overflow-hidden border border-black/40">
+            <div className="h-full bg-[var(--brand-green)] transition-all duration-300" style={{ width: `${subtaskProgress}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-black/20 flex-wrap">

@@ -71,7 +71,7 @@ export default function TaskModal() {
         setModalOpen(false);
         setAutoSetProjectForTask(null);
         setDetailMode(false);
-        toast.success('Task sacrificed');
+        toast.success('Task nested');
       }}
       projects={projects}
       allTags={allTags}
@@ -115,7 +115,6 @@ function TaskModalContent({
         priority: editingTask.priority,
         status: editingTask.status,
         startDate: editingTask.startDate,
-        endDate: editingTask.endDate,
         durationHours: editingTask.durationHours,
         durationMinutes: editingTask.durationMinutes,
         due: editingTask.due,
@@ -131,7 +130,6 @@ function TaskModalContent({
       priority: 'medium',
       status: 'todo',
       startDate: '',
-      endDate: '',
       durationHours: 0,
       durationMinutes: 30,
       due: '',
@@ -143,6 +141,7 @@ function TaskModalContent({
 
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [tagInput, setTagInput] = useState('');
+  const [showStartDate, setShowStartDate] = useState(Boolean(editingTask?.startDate));
 
   const handleSave = () => {
     if (!formData.title?.trim()) {
@@ -482,12 +481,36 @@ function TaskModalContent({
 
           {/* Due Date */}
           <div className="mb-4">
-            <label
-              className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5"
-              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-            >
-              Due Date
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                className="text-[10px] tracking-wider text-white/60 uppercase block"
+                style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+              >
+                Due Date (End)
+              </label>
+              {!showStartDate ? (
+                <button
+                  type="button"
+                  onClick={() => setShowStartDate(true)}
+                  className="text-[10px] px-2 py-0.5 border border-[#4a4a4a] rounded text-white/70 hover:text-white"
+                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                >
+                  + START DATE
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartDate(false);
+                    setFormData({ ...formData, startDate: '' });
+                  }}
+                  className="text-[10px] px-2 py-0.5 border border-[#4a4a4a] rounded text-white/70 hover:text-white"
+                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                >
+                  REMOVE START
+                </button>
+              )}
+            </div>
             <div className="flex gap-2">
               <input
                 type="date"
@@ -529,6 +552,19 @@ function TaskModalContent({
                 </span>
               </button>
             </div>
+            {showStartDate && (
+              <div className="mt-2">
+                <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate || ''}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none"
+                />
+              </div>
+            )}
           </div>
 
           {/* Tags - Clickable chips */}
@@ -676,7 +712,7 @@ function TaskModalContent({
                 className="px-3 py-2 bg-[#3a3a3a] text-white text-xs font-bold tracking-wider border-[2px] border-[#4a4a4a] rounded-lg cursor-pointer transition-all duration-150 hover:bg-[#4a4a4a] flex items-center gap-1.5"
                 style={{ fontFamily: 'var(--font-space-mono), monospace' }}
               >
-                <Archive className="w-4 h-4" /> SACRIFICE
+                <Archive className="w-4 h-4" /> NEST
               </button>
               <button
                 onClick={handleDelete}

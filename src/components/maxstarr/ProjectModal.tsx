@@ -39,7 +39,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const [icon, setIcon] = useState(editingProject?.icon || '📁');
   const [due, setDue] = useState(editingProject?.due || '');
   const [startDate, setStartDate] = useState(editingProject?.startDate || '');
-  const [endDate, setEndDate] = useState(editingProject?.endDate || '');
+  const [showStartDate, setShowStartDate] = useState(Boolean(editingProject?.startDate));
   const [category, setCategory] = useState<string | null>(editingProject?.category || null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -62,7 +62,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         color, 
         icon,
         startDate,
-        endDate,
+        endDate: due,
         due,
         category
       });
@@ -73,7 +73,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         color,
         icon,
         startDate,
-        endDate,
+        endDate: due,
         due,
         category,
         order: projects.length,
@@ -125,13 +125,13 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const handleSacrifice = () => {
     if (!editingProjectId) return;
     archiveProject(editingProjectId);
-    toast.success('Project sacrificed');
+    toast.success('Project nested');
     onClose();
   };
 
   return (
     <div 
-      className="bg-white border-[3px] border-black rounded-lg shadow-[8px_8px_0_black] w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-200"
+      className="bg-white border-[3px] border-black rounded-lg shadow-[8px_8px_0_black] w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       onClick={e => e.stopPropagation()}
     >
       {/* Header */}
@@ -256,7 +256,34 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[var(--gray-500)] tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            Optional Start Date
+          </span>
+          {!showStartDate ? (
+            <button
+              type="button"
+              onClick={() => setShowStartDate(true)}
+              className="text-[10px] px-2 py-1 border border-black rounded"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              + ADD START DATE
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowStartDate(false);
+                setStartDate('');
+              }}
+              className="text-[10px] px-2 py-1 border border-black rounded"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              REMOVE
+            </button>
+          )}
+        </div>
+        {showStartDate && (
           <div>
             <label className="block text-[10px] text-[var(--gray-500)] mb-1 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
               Start Date
@@ -268,18 +295,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
               className="w-full px-3 py-2.5 border-[2px] border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] transition-all"
             />
           </div>
-          <div>
-            <label className="block text-[10px] text-[var(--gray-500)] mb-1 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-              Event / End
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2.5 border-[2px] border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] transition-all"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Color Picker */}
         <div>
@@ -489,7 +505,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
                 className="flex items-center gap-1.5 px-3 py-2 bg-[var(--gray-600)] text-white border-[2px] border-black rounded-lg hover:bg-[var(--gray-800)] transition-all text-xs font-bold cursor-pointer btn-shine"
                 style={{ fontFamily: 'var(--font-space-mono), monospace' }}
               >
-                <Archive className="w-3.5 h-3.5" /> SACRIFICE
+                <Archive className="w-3.5 h-3.5" /> NEST
               </button>
               <button
                 onClick={handleDelete}

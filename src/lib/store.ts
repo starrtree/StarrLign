@@ -915,6 +915,9 @@ export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
   progress: 0,
   notes: '',
   subtasks: [],
+  timerStartedAt: null,
+  lastTimerStartAt: null,
+  lastTimerEndAt: null,
   isArchived: false,
   ...overrides,
 });

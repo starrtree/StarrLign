@@ -11,7 +11,7 @@ const viewTitles: Record<string, string> = {
   projects: 'PROJECTS',
   money: 'MONEY LAB',
   calendar: 'CALENDAR',
-  archive: 'SACRIFICE PIT',
+  archive: 'NEST',
 };
 
 export default function Topbar() {

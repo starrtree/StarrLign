@@ -267,7 +267,7 @@ export default function Sidebar() {
           />
           <SidebarItem
             icon={<Archive className="w-4 h-4" />}
-            label="Sacrifice Pit"
+            label="Nest"
             active={currentView === 'archive'}
             onClick={() => handleNavClick('archive')}
           />

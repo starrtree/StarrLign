@@ -49,6 +49,22 @@ export default function CalendarView() {
     return map;
   }, [visibleTasks]);
 
+  const rangedDates = useMemo(() => {
+    const set = new Set<string>();
+    visibleTasks.forEach((task) => {
+      if (!task.startDate || !task.due || task.due === 'idk yet' || task.due === 'Ongoing') return;
+      const start = new Date(task.startDate);
+      const end = new Date(task.due);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return;
+      const cursorDate = new Date(start);
+      while (cursorDate <= end) {
+        set.add(toYmd(cursorDate));
+        cursorDate.setDate(cursorDate.getDate() + 1);
+      }
+    });
+    return set;
+  }, [visibleTasks]);
+
   const days = Array.from({ length: 42 }).map((_, i) => {
     const date = new Date(gridStart);
     date.setDate(gridStart.getDate() + i);
@@ -120,7 +136,12 @@ export default function CalendarView() {
           const isCurrentMonth = day.date.getMonth() === cursor.getMonth();
           const isToday = day.key === toYmd(new Date());
           return (
-            <div key={day.key} className={cn('border-[2px] border-black rounded-lg min-h-[130px] p-2 bg-white shadow-[2px_2px_0_black]', !isCurrentMonth && 'opacity-45', isToday && 'ring-2 ring-[var(--brand-yellow)]')}>
+            <div key={day.key} className={cn(
+              'border-[2px] border-black rounded-lg min-h-[130px] p-2 bg-white shadow-[2px_2px_0_black]',
+              !isCurrentMonth && 'opacity-45',
+              isToday && 'ring-2 ring-[var(--brand-yellow)]',
+              rangedDates.has(day.key) && 'bg-[var(--brand-yellow)]/30'
+            )}>
               <div className="text-xs font-bold mb-1">{day.date.getDate()}</div>
               <div className="space-y-1">
                 {day.tasks.slice(0, 4).map((task) => (
