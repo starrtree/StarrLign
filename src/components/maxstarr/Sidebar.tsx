@@ -3,7 +3,7 @@
 import { useStore } from '@/lib/store';
 import { ViewType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Star, Zap, FileText, Settings, Menu, X, FolderOpen, Folder, GripVertical, Pencil, Archive } from 'lucide-react';
+import { Star, Zap, CalendarDays, Menu, X, FolderOpen, Folder, GripVertical, Pencil, Archive, Wallet, Settings } from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarItemProps {
@@ -254,6 +254,18 @@ export default function Sidebar() {
             }}
           />
           <SidebarItem
+            icon={<Wallet className="w-4 h-4" />}
+            label="Money"
+            active={currentView === 'money'}
+            onClick={() => handleNavClick('money')}
+          />
+          <SidebarItem
+            icon={<CalendarDays className="w-4 h-4" />}
+            label="Calendar"
+            active={currentView === 'calendar'}
+            onClick={() => handleNavClick('calendar')}
+          />
+          <SidebarItem
             icon={<Archive className="w-4 h-4" />}
             label="Sacrifice Pit"
             active={currentView === 'archive'}
@@ -370,4 +382,3 @@ export default function Sidebar() {
     </>
   );
 }
-

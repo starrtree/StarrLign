@@ -4,7 +4,9 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Plus, Trash2, ExternalLink, Check, FolderOpen, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Check, FolderOpen, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnimatePresence, PanInfo, motion, useMotionValue, useTransform } from 'framer-motion';
+import { playAppSound } from '@/lib/sound';
 
 export default function FocusZone() {
   const { 
@@ -16,13 +18,28 @@ export default function FocusZone() {
     deleteSubtask,
     setEditingTaskId, 
     setModalOpen, 
+    setDetailMode,
     setCurrentView,
     setSelectedProjectId,
     projects,
-    theme
+    theme,
+    soundEnabled
   } = useStore();
   
-  const focusTask = tasks.find(t => t.status === 'doing');
+  const activeFocusTasks = useMemo(
+    () => tasks.filter(t => t.status === 'doing' && !t.isArchived),
+    [tasks]
+  );
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState(1);
+  const touchStartXRef = useRef<number | null>(null);
+  const focusTask = activeFocusTasks[focusIndex] ?? activeFocusTasks[0];
+
+  useEffect(() => {
+    if (focusIndex > activeFocusTasks.length - 1) {
+      setFocusIndex(Math.max(activeFocusTasks.length - 1, 0));
+    }
+  }, [activeFocusTasks.length, focusIndex]);
 
   // Local state for editing
   const [editingNotes, setEditingNotes] = useState(false);
@@ -30,6 +47,7 @@ export default function FocusZone() {
   const [editingSubtaskText, setEditingSubtaskText] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [isCardCelebrating, setIsCardCelebrating] = useState(false);
 
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const newSubtaskRef = useRef<HTMLInputElement>(null);
@@ -68,14 +86,36 @@ export default function FocusZone() {
     if (focusTask) {
       updateTask(focusTask.id, { status: 'done', progress: 100 });
       toast.success('Mission completed! 🎉');
+      setIsCardCelebrating(true);
+      setTimeout(() => setIsCardCelebrating(false), 1450);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
+      }
     }
   };
 
   const handleOpenDetails = () => {
     if (focusTask) {
       setEditingTaskId(focusTask.id);
+      setDetailMode(true);
       setModalOpen(true);
     }
+  };
+
+  const handleSwipeTask = (direction: 1 | -1) => {
+    if (activeFocusTasks.length <= 1) return;
+    setSwipeDirection(direction);
+    setFocusIndex((prev) => {
+      const next = prev + direction;
+      if (next < 0) return activeFocusTasks.length - 1;
+      if (next >= activeFocusTasks.length) return 0;
+      return next;
+    });
+  };
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (Math.abs(info.offset.x) < 75 && Math.abs(info.velocity.x) < 450) return;
+    handleSwipeTask(info.offset.x > 0 ? -1 : 1);
   };
 
   const handleSelectTask = () => {
@@ -287,18 +327,68 @@ export default function FocusZone() {
 
   const duration = formatDuration(focusTask.durationHours, focusTask.durationMinutes);
   const textColor = projectColor === 'yellow' ? 'black' : 'white';
+  const swipeX = useMotionValue(0);
+  const swipeRotate = useTransform(swipeX, [-260, 0, 260], [-10, 0, 10]);
 
   return (
     <div
+      onTouchStart={(e) => {
+        touchStartXRef.current = e.changedTouches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartXRef.current === null) return;
+        const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
+        const delta = endX - touchStartXRef.current;
+        if (Math.abs(delta) > 40) {
+          handleSwipeTask(delta > 0 ? -1 : 1);
+        }
+        touchStartXRef.current = null;
+      }}
       className={cn(
         "border-[3px] border-black rounded-lg p-4 md:p-8 mb-6 md:mb-8 relative transition-all duration-500 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] gap-6 md:gap-8",
-        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]"
+        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]",
+        isCardCelebrating && "card-gyrate"
       )}
       style={{
         backgroundColor: mainColor,
         ...getGlowStyle(),
       }}
     >
+      {activeFocusTasks.length > 1 && (
+        <>
+          <button
+            onClick={() => handleSwipeTask(-1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/40 text-white p-1.5 rounded-full border border-white/20"
+            title="Previous active task"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleSwipeTask(1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/40 text-white p-1.5 rounded-full border border-white/20"
+            title="Next active task"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={focusTask.id}
+          initial={{ x: swipeDirection * 80, opacity: 0.4, scale: 0.98 }}
+          animate={{ x: 0, opacity: 1, scale: 1 }}
+          exit={{ x: swipeDirection * -80, opacity: 0.2, scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 250, damping: 24, mass: 0.95 }}
+          drag={activeFocusTasks.length > 1 ? 'x' : false}
+          dragElastic={0.18}
+          dragMomentum
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+          style={{ x: swipeX, rotate: swipeRotate }}
+          whileDrag={{ scale: 1.015, cursor: 'grabbing' }}
+          className="contents"
+        >
       {/* LEFT: Notes */}
       <div className="lg:border-r-[2px] lg:border-dashed lg:border-black/20 lg:pr-5 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
@@ -454,7 +544,15 @@ export default function FocusZone() {
               >
                 {/* Glass-style Checkbox */}
                 <div
-                  onClick={() => toggleSubtask(focusTask.id, subtask.id)}
+                  onClick={() => {
+                    const wasDone = subtask.done;
+                    toggleSubtask(focusTask.id, subtask.id);
+                    if (wasDone) {
+                      playAppSound('subtaskToggle', soundEnabled);
+                    } else if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new Event('starrlign:subtask-complete'));
+                    }
+                  }}
                   className={cn(
                     "w-5 h-5 border-[2px] rounded-md flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 transform hover:scale-110",
                     subtask.done 
@@ -541,7 +639,8 @@ export default function FocusZone() {
           </button>
         </div>
       </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
-

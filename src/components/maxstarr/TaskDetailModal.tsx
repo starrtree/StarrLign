@@ -6,6 +6,7 @@ import { Task } from '@/lib/types';
 import { X, Clock, Calendar, Tag, CheckCircle, Circle, Pencil, Trash2, Archive, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { playAppSound } from '@/lib/sound';
 
 export default function TaskDetailModal() {
   const { 
@@ -19,7 +20,8 @@ export default function TaskDetailModal() {
     archiveTask,
     setEditingTaskId,
     setCurrentView,
-    setDetailMode
+    setDetailMode,
+    soundEnabled
   } = useStore();
   
   // Find the task being viewed
@@ -73,6 +75,9 @@ export default function TaskDetailModal() {
     if (task) {
       updateTask(task.id, { status: 'done', progress: 100 });
       toast.success('Task completed! 🎉');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
+      }
       handleClose();
     }
   };
@@ -95,10 +100,16 @@ export default function TaskDetailModal() {
 
   const handleToggleSubtask = (subtaskId: string) => {
     if (task) {
+      const currentSubtask = task.subtasks.find((st) => st.id === subtaskId);
       const updatedSubtasks = task.subtasks.map(st => 
         st.id === subtaskId ? { ...st, done: !st.done } : st
       );
       updateTask(task.id, { subtasks: updatedSubtasks });
+      if (currentSubtask?.done) {
+        playAppSound('subtaskToggle', soundEnabled);
+      } else if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:subtask-complete'));
+      }
     }
   };
 
@@ -333,4 +344,3 @@ export default function TaskDetailModal() {
     </div>
   );
 }
-
