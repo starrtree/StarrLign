@@ -13,6 +13,8 @@ import KanbanView from '@/components/maxstarr/KanbanView';
 import DocumentsView from '@/components/documents/DocumentsView';
 import ProjectView from '@/components/maxstarr/ProjectView';
 import ArchiveView from '@/components/maxstarr/ArchiveView';
+import MoneyView from '@/components/maxstarr/MoneyView';
+import CalendarView from '@/components/maxstarr/CalendarView';
 import DataProvider from '@/components/maxstarr/DataProvider';
 import { useStore } from '@/lib/store';
 
@@ -31,6 +33,10 @@ function AppContent() {
         return <ProjectView />;
       case 'archive':
         return <ArchiveView />;
+      case 'money':
+        return <MoneyView />;
+      case 'calendar':
+        return <CalendarView />;
       default:
         return <DashboardView />;
     }
@@ -47,7 +53,7 @@ function AppContent() {
         <Topbar />
 
         {/* Hero Stripe - only show on dashboard and kanban */}
-        {(currentView === 'dashboard' || currentView === 'kanban') && <HeroStripe />}
+        {(currentView === 'dashboard' || currentView === 'kanban' || currentView === 'money' || currentView === 'calendar') && <HeroStripe />}
 
         {/* Content Area */}
         <div className="flex-1 p-4 md:p-6">
