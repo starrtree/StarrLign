@@ -3,7 +3,7 @@
 import { useStore } from '@/lib/store';
 import { ViewType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Star, Zap, CalendarDays, Menu, X, FolderOpen, Folder, GripVertical, Pencil, Archive, Wallet } from 'lucide-react';
+import { Star, Zap, CalendarDays, Menu, X, FolderOpen, Folder, GripVertical, Pencil, Archive, Wallet, Settings } from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarItemProps {
