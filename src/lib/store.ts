@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType, ProjectCategory } from './types';
+import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType, ProjectCategory, Budget, MoneyEntry, InvestmentPosition } from './types';
 
 // UUID generator
 const uuid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -10,8 +10,11 @@ const initialTasks: Task[] = [
     id: 't1',
     title: 'Define Your North Star',
     project: 'Your Journey',
+    linkedProjects: ['Your Journey'],
     priority: 'high',
     status: 'doing',
+    startDate: '',
+    endDate: '',
     due: '',
     durationHours: 0,
     durationMinutes: 30,
@@ -29,7 +32,7 @@ const initialTasks: Task[] = [
 
 // Initial projects data - single template project
 const initialProjects: Project[] = [
-  { id: 'p1', name: 'Your Journey', color: 'yellow', icon: '⭐', tasks: 1, completed: 0, due: 'Now', order: 0, isArchived: false, category: null },
+  { id: 'p1', name: 'Your Journey', color: 'yellow', icon: '⭐', tasks: 1, completed: 0, startDate: '', endDate: '', due: 'Now', order: 0, isArchived: false, category: null },
 ];
 
 // Initial project categories
@@ -78,12 +81,25 @@ const initialDocuments: Document[] = [
   },
 ];
 
+const initialBudgets: Budget[] = [
+  { id: 'b-work', name: 'Work', limit: 3000 },
+  { id: 'b-saving', name: 'Saving', limit: 1200 },
+  { id: 'b-personal', name: 'Personal', limit: 900 },
+];
+
+const initialMoneyEntries: MoneyEntry[] = [];
+const initialInvestmentPositions: InvestmentPosition[] = [];
+
 type DatabaseSnapshot = {
   tasks: Task[];
   projects: Project[];
   projectCategories: ProjectCategory[];
   documents: Document[];
   tags: string[];
+  budgets: Budget[];
+  moneyEntries: MoneyEntry[];
+  investmentPositions: InvestmentPosition[];
+  baseIncomeMonthly: number;
 };
 
 const initialDatabaseSnapshot: DatabaseSnapshot = {
@@ -92,11 +108,19 @@ const initialDatabaseSnapshot: DatabaseSnapshot = {
   projectCategories: initialProjectCategories,
   documents: initialDocuments,
   tags: initialTags,
+  budgets: initialBudgets,
+  moneyEntries: initialMoneyEntries,
+  investmentPositions: initialInvestmentPositions,
+  baseIncomeMonthly: 0,
 };
 
 const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => ({
   tasks: snapshot.tasks.map((task) => ({
     ...task,
+    linkedProjects:
+      task.linkedProjects && task.linkedProjects.length > 0
+        ? [...task.linkedProjects]
+        : [task.project].filter(Boolean),
     tags: [...task.tags],
     subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
   })),
@@ -110,6 +134,10 @@ const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => 
     })),
   })),
   tags: [...snapshot.tags],
+  budgets: (snapshot.budgets || []).map((budget) => ({ ...budget })),
+  moneyEntries: (snapshot.moneyEntries || []).map((entry) => ({ ...entry })),
+  investmentPositions: (snapshot.investmentPositions || []).map((position) => ({ ...position })),
+  baseIncomeMonthly: snapshot.baseIncomeMonthly || 0,
 });
 
 const createDefaultSnapshot = (): DatabaseSnapshot => cloneDatabaseSnapshot(initialDatabaseSnapshot);
@@ -120,7 +148,10 @@ const isDatabaseSnapshotEmpty = (snapshot: DatabaseSnapshot): boolean => {
     snapshot.projects.length === 0 &&
     snapshot.projectCategories.length === 0 &&
     snapshot.documents.length === 0 &&
-    snapshot.tags.length === 0
+    snapshot.tags.length === 0 &&
+    (snapshot.budgets?.length || 0) === 0 &&
+    (snapshot.moneyEntries?.length || 0) === 0 &&
+    (snapshot.investmentPositions?.length || 0) === 0
   );
 };
 
@@ -150,6 +181,10 @@ const saveToDatabase = async (state: AppState) => {
         projectCategories: state.projectCategories,
         documents: state.documents,
         tags: state.tags,
+        budgets: state.budgets,
+        moneyEntries: state.moneyEntries,
+        investmentPositions: state.investmentPositions,
+        baseIncomeMonthly: state.baseIncomeMonthly,
       });
       console.log('Data saved to database');
     } catch (error) {
@@ -184,6 +219,10 @@ export const useStore = create<AppState>((set, get) => ({
   projectFilter: 'active',
   tags: initialTags,
   documents: initialDocuments,
+  budgets: initialBudgets,
+  moneyEntries: initialMoneyEntries,
+  investmentPositions: initialInvestmentPositions,
+  baseIncomeMonthly: 0,
   editingTaskId: null,
   isModalOpen: false,
   isDetailMode: false,
@@ -203,16 +242,87 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedDocumentId: (id) => set({ selectedDocumentId: id }),
 
   addTask: (task) => {
-    set((state) => ({ tasks: [...state.tasks, task] }));
+    const linkedProjects =
+      task.linkedProjects && task.linkedProjects.length > 0
+        ? Array.from(new Set([task.project, ...task.linkedProjects]))
+        : [task.project];
+    set((state) => ({ tasks: [...state.tasks, { ...task, linkedProjects }] }));
     saveToDatabase(get());
   },
 
   updateTask: (id, updates) => {
-    set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === id ? { ...task, ...updates } : task
-      ),
-    }));
+    let completedProjects: string[] = [];
+    set((state) => {
+      let previousTask: Task | null = null;
+      let updatedTask: Task | null = null;
+      const tasks = state.tasks.map((task) => {
+        if (task.id !== id) return task;
+        previousTask = task;
+        const nextTask = { ...task, ...updates } as Task;
+        const normalizedLinkedProjects =
+          nextTask.linkedProjects && nextTask.linkedProjects.length > 0
+            ? Array.from(new Set([nextTask.project, ...nextTask.linkedProjects]))
+            : [nextTask.project];
+        updatedTask = { ...nextTask, linkedProjects: normalizedLinkedProjects };
+        return updatedTask;
+      });
+
+      if (previousTask && updatedTask && previousTask.status !== 'done' && updatedTask.status === 'done') {
+        const affectedProjects = updatedTask.linkedProjects || [updatedTask.project];
+        completedProjects = affectedProjects.filter((projectName) => {
+          const projectTasks = tasks.filter(
+            (task) =>
+              !task.isArchived &&
+              (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+          );
+          return projectTasks.length > 0 && projectTasks.every((task) => task.status === 'done');
+        });
+      }
+
+      return { tasks };
+    });
+    if (typeof window !== 'undefined') {
+      completedProjects.forEach((projectName) => {
+        window.dispatchEvent(new CustomEvent('starrlign:project-complete', { detail: { projectName } }));
+      });
+    }
+    saveToDatabase(get());
+  },
+
+  reorderTasksInProject: (projectName, draggedTaskId, targetTaskId) => {
+    if (draggedTaskId === targetTaskId) return;
+    set((state) => {
+      const projectTaskIds = state.tasks
+        .filter(
+          (task) =>
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+        )
+        .map((task) => task.id);
+
+      const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
+      const targetIndex = projectTaskIds.indexOf(targetTaskId);
+      if (sourceIndex === -1 || targetIndex === -1) return state;
+
+      const reorderedIds = [...projectTaskIds];
+      const [moved] = reorderedIds.splice(sourceIndex, 1);
+      reorderedIds.splice(targetIndex, 0, moved);
+
+      const taskById = new Map(state.tasks.map((task) => [task.id, task]));
+      const reorderedProjectTasks = reorderedIds
+        .map((id) => taskById.get(id))
+        .filter((task): task is Task => Boolean(task));
+
+      const nonProjectTasks = state.tasks.filter(
+        (task) =>
+          !(
+            !task.isArchived &&
+            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+          )
+      );
+
+      return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
+    });
     saveToDatabase(get());
   },
 
@@ -313,6 +423,28 @@ export const useStore = create<AppState>((set, get) => ({
       });
       return { tasks };
     });
+    saveToDatabase(get());
+  },
+
+  createTag: (tag) => {
+    const normalizedTag = tag.trim();
+    if (!normalizedTag) return;
+
+    set((state) => {
+      if (state.tags.includes(normalizedTag)) return state;
+      return { tags: [...state.tags, normalizedTag] };
+    });
+    saveToDatabase(get());
+  },
+
+  deleteTag: (tag) => {
+    set((state) => ({
+      tags: state.tags.filter((existingTag) => existingTag !== tag),
+      tasks: state.tasks.map((task) => ({
+        ...task,
+        tags: task.tags.filter((taskTag) => taskTag !== tag),
+      })),
+    }));
     saveToDatabase(get());
   },
 
@@ -420,6 +552,72 @@ export const useStore = create<AppState>((set, get) => ({
     saveToDatabase(get());
   },
 
+  // Money actions
+  addBudget: (budget) => {
+    set((state) => ({ budgets: [...state.budgets, budget] }));
+    saveToDatabase(get());
+  },
+
+  updateBudget: (id, updates) => {
+    set((state) => ({
+      budgets: state.budgets.map((budget) => (budget.id === id ? { ...budget, ...updates } : budget)),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteBudget: (id) => {
+    set((state) => ({ budgets: state.budgets.filter((budget) => budget.id !== id) }));
+    saveToDatabase(get());
+  },
+
+  addMoneyEntry: (entry) => {
+    set((state) => ({ moneyEntries: [...state.moneyEntries, entry] }));
+    saveToDatabase(get());
+  },
+
+  updateMoneyEntry: (id, updates) => {
+    set((state) => ({
+      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry)),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteMoneyEntry: (id) => {
+    set((state) => ({ moneyEntries: state.moneyEntries.filter((entry) => entry.id !== id) }));
+    saveToDatabase(get());
+  },
+
+  setMoneyEntryIncluded: (id, includedInBudget) => {
+    set((state) => ({
+      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, includedInBudget } : entry)),
+    }));
+    saveToDatabase(get());
+  },
+
+  setBaseIncomeMonthly: (amount) => {
+    set({ baseIncomeMonthly: Math.max(0, amount || 0) });
+    saveToDatabase(get());
+  },
+
+  addInvestmentPosition: (position) => {
+    set((state) => ({ investmentPositions: [...state.investmentPositions, position] }));
+    saveToDatabase(get());
+  },
+
+  updateInvestmentPosition: (id, updates) => {
+    set((state) => ({
+      investmentPositions: state.investmentPositions.map((position) =>
+        position.id === id ? { ...position, ...updates } : position
+      ),
+    }));
+    saveToDatabase(get());
+  },
+
+  deleteInvestmentPosition: (id) => {
+    set((state) => ({ investmentPositions: state.investmentPositions.filter((position) => position.id !== id) }));
+    saveToDatabase(get());
+  },
+
   // Block actions
   addBlock: (docId, block, afterBlockId) => {
     set((state) => ({
@@ -495,11 +693,31 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateProject: (id, updates) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
+    set((state) => {
+      const currentProject = state.projects.find((project) => project.id === id);
+      const updatedProjects = state.projects.map((project) =>
         project.id === id ? { ...project, ...updates } : project
-      ),
-    }));
+      );
+
+      if (!currentProject || !updates.name || updates.name === currentProject.name) {
+        return { projects: updatedProjects };
+      }
+
+      return {
+        projects: updatedProjects,
+        tasks: state.tasks.map((task) =>
+          task.project === currentProject.name || task.linkedProjects?.includes(currentProject.name)
+            ? {
+                ...task,
+                project: task.project === currentProject.name ? (updates.name as string) : task.project,
+                linkedProjects: (task.linkedProjects || [task.project]).map((projectName) =>
+                  projectName === currentProject.name ? (updates.name as string) : projectName
+                ),
+              }
+            : task
+        ),
+      };
+    });
     saveToDatabase(get());
   },
 
@@ -617,6 +835,10 @@ export const useStore = create<AppState>((set, get) => ({
       projectFilter: 'active',
       tags: defaultSnapshot.tags,
       documents: defaultSnapshot.documents,
+      budgets: defaultSnapshot.budgets,
+      moneyEntries: defaultSnapshot.moneyEntries,
+      investmentPositions: defaultSnapshot.investmentPositions,
+      baseIncomeMonthly: defaultSnapshot.baseIncomeMonthly || 0,
       editingTaskId: null,
       isModalOpen: false,
       isDetailMode: false,
@@ -643,6 +865,10 @@ export const useStore = create<AppState>((set, get) => ({
       projectCategories: snapshot.projectCategories,
       documents: snapshot.documents,
       tags: snapshot.tags,
+      budgets: snapshot.budgets || initialBudgets,
+      moneyEntries: snapshot.moneyEntries || [],
+      investmentPositions: snapshot.investmentPositions || [],
+      baseIncomeMonthly: snapshot.baseIncomeMonthly || 0,
     });
 
     if (isDatabaseSnapshotEmpty(data)) {
@@ -663,6 +889,8 @@ export const createNewProject = (overrides: Partial<Project> = {}): Project => (
   icon: '📁',
   tasks: 0,
   completed: 0,
+  startDate: '',
+  endDate: '',
   due: 'Ongoing',
   order: 0,
   isArchived: false,
@@ -675,8 +903,11 @@ export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
   id: uuid(),
   title: '',
   project: 'Your Journey',
+  linkedProjects: ['Your Journey'],
   priority: 'medium',
   status: 'todo',
+  startDate: '',
+  endDate: '',
   due: '',
   durationHours: 0,
   durationMinutes: 30,
@@ -708,7 +939,7 @@ export const formatDuration = (hours: number, minutes: number): string => {
 export const calculateWordCount = (blocks: Block[]): number => {
   const text = blocks
     .filter(b => ['h1', 'h2', 'h3', 'text', 'comment', 'callout'].includes(b.type))
-    .map(b => b.content)
+    .map(b => b.content.replace(/<[^>]+>/g, ' '))
     .join(' ');
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 };
@@ -734,5 +965,3 @@ export const estimateReadTime = (wordCount: number): string => {
   const mins = Math.ceil(wordCount / 200);
   return `~${mins} min read`;
 };
-
-
