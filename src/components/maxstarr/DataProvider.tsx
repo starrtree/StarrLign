@@ -44,7 +44,7 @@ export default function DataProvider({ children }: { children: React.ReactNode }
     const onTaskComplete = () => {
       setBurst('task');
       setConfetti(createConfetti(18));
-      playAppSound('cardComplete', soundEnabled);
+      playAppSound('taskComplete', soundEnabled);
       vibrateDevice([22, 30, 22]);
       toast.success('Task complete! ✨');
       if (typeof window !== 'undefined') {
@@ -60,7 +60,7 @@ export default function DataProvider({ children }: { children: React.ReactNode }
       const detail = (event as CustomEvent<{ projectName?: string }>).detail;
       setBurst('project');
       setConfetti(createConfetti(36));
-      playAppSound('cardComplete', soundEnabled);
+      playAppSound('projectComplete', soundEnabled);
       vibrateDevice([45, 60, 45, 60]);
       toast.success(`Project complete${detail?.projectName ? `: ${detail.projectName}` : ''}! 🏆`);
       if (typeof window !== 'undefined') {
@@ -77,13 +77,42 @@ export default function DataProvider({ children }: { children: React.ReactNode }
       vibrateDevice(14);
     };
 
+    const onCardComplete = () => {
+      playAppSound('cardComplete', soundEnabled);
+    };
+
+    const onTaskSwipe = () => {
+      playAppSound('taskSwipe', soundEnabled);
+      vibrateDevice(8);
+    };
+
+    const onUiOpen = () => playAppSound('uiOpen', soundEnabled);
+    const onUiClose = () => playAppSound('uiClose', soundEnabled);
+    const onMoneyAdd = () => playAppSound('moneyAdd', soundEnabled);
+    const onMoneyDelete = () => playAppSound('moneyDelete', soundEnabled);
+    const onAchievement = () => playAppSound('achievement', soundEnabled);
+
     window.addEventListener('starrlign:task-complete', onTaskComplete);
     window.addEventListener('starrlign:project-complete', onProjectComplete);
     window.addEventListener('starrlign:subtask-complete', onSubtaskComplete);
+    window.addEventListener('starrlign:card-complete', onCardComplete);
+    window.addEventListener('starrlign:task-swipe', onTaskSwipe);
+    window.addEventListener('starrlign:ui-open', onUiOpen);
+    window.addEventListener('starrlign:ui-close', onUiClose);
+    window.addEventListener('starrlign:money-add', onMoneyAdd);
+    window.addEventListener('starrlign:money-delete', onMoneyDelete);
+    window.addEventListener('starrlign:achievement', onAchievement);
     return () => {
       window.removeEventListener('starrlign:task-complete', onTaskComplete);
       window.removeEventListener('starrlign:project-complete', onProjectComplete);
       window.removeEventListener('starrlign:subtask-complete', onSubtaskComplete);
+      window.removeEventListener('starrlign:card-complete', onCardComplete);
+      window.removeEventListener('starrlign:task-swipe', onTaskSwipe);
+      window.removeEventListener('starrlign:ui-open', onUiOpen);
+      window.removeEventListener('starrlign:ui-close', onUiClose);
+      window.removeEventListener('starrlign:money-add', onMoneyAdd);
+      window.removeEventListener('starrlign:money-delete', onMoneyDelete);
+      window.removeEventListener('starrlign:achievement', onAchievement);
     };
   }, [soundEnabled]);
 

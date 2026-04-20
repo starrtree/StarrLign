@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Budget, InvestmentPosition, MoneyEntry } from '@/lib/types';
-import { Banknote, Calculator, Plus, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Banknote, Calculator, Landmark, Plus, Target, Trash2, TrendingUp, Wallet2 } from 'lucide-react';
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
@@ -68,9 +68,29 @@ export default function MoneyView() {
     return { totalCost, totalValue, pnl: totalValue - totalCost };
   }, [investmentPositions]);
 
+  const totalIncome = useMemo(
+    () => moneyEntries.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + entry.amount, 0),
+    [moneyEntries]
+  );
+  const totalSpent = useMemo(
+    () => moneyEntries.filter((entry) => entry.type !== 'income').reduce((sum, entry) => sum + entry.amount, 0),
+    [moneyEntries]
+  );
+  const totalIncluded = useMemo(() => moneyEntries.filter((entry) => entry.includedInBudget).length, [moneyEntries]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (simulatedBalance >= 1000) {
+      window.dispatchEvent(new Event('starrlign:achievement'));
+    }
+  }, [simulatedBalance]);
+
+  const moneyFmt = (num: number) => `$${num.toFixed(2)}`;
+
   return (
     <div className="max-w-[1200px] mx-auto space-y-5">
-      <div className="border-[2px] border-black rounded-lg bg-[var(--brand-blue)] p-4 shadow-[4px_4px_0_black] text-white">
+      <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(135deg,var(--brand-blue)_0%,#1d5ed8_55%,#5b9dff_100%)] p-4 shadow-[4px_4px_0_black] text-white overflow-hidden relative">
+        <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-white/10 blur-xl" />
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <div className="text-[10px] tracking-[2px] uppercase text-white/70">Money Control Center</div>
@@ -78,13 +98,32 @@ export default function MoneyView() {
           </div>
           <div className="text-right">
             <div className="text-[10px] uppercase tracking-[2px] text-white/70">Monthly Simulated Balance</div>
-            <div className="text-2xl font-bold">${simulatedBalance.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{moneyFmt(simulatedBalance)}</div>
           </div>
         </div>
       </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="border-[2px] border-black rounded-lg bg-white p-3 shadow-[3px_3px_0_black]">
+          <div className="text-[10px] uppercase tracking-[1.6px] text-black/60 mb-1 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Income</div>
+          <div className="text-xl font-bold text-[var(--brand-green)]">{moneyFmt(baseIncomeMonthly + totalIncome)}</div>
+        </div>
+        <div className="border-[2px] border-black rounded-lg bg-white p-3 shadow-[3px_3px_0_black]">
+          <div className="text-[10px] uppercase tracking-[1.6px] text-black/60 mb-1 flex items-center gap-1"><ArrowDownRight className="w-3 h-3" /> Outflow</div>
+          <div className="text-xl font-bold text-[var(--brand-red)]">{moneyFmt(totalSpent)}</div>
+        </div>
+        <div className="border-[2px] border-black rounded-lg bg-white p-3 shadow-[3px_3px_0_black]">
+          <div className="text-[10px] uppercase tracking-[1.6px] text-black/60 mb-1 flex items-center gap-1"><Wallet2 className="w-3 h-3" /> Included</div>
+          <div className="text-xl font-bold">{totalIncluded} items</div>
+        </div>
+        <div className="border-[2px] border-black rounded-lg bg-white p-3 shadow-[3px_3px_0_black]">
+          <div className="text-[10px] uppercase tracking-[1.6px] text-black/60 mb-1 flex items-center gap-1"><Landmark className="w-3 h-3" /> Portfolio</div>
+          <div className="text-xl font-bold">{moneyFmt(investmentSummary.totalValue)}</div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="border-[2px] border-black rounded-lg bg-white p-4 shadow-[3px_3px_0_black]">
+        <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
           <div className="flex items-center gap-2 mb-3"><Banknote className="w-4 h-4" /> Base Monthly Income</div>
           <input
             type="number"
@@ -95,7 +134,7 @@ export default function MoneyView() {
           <p className="text-xs text-black/60 mt-2">Used in overall simulation and budget planning.</p>
         </div>
 
-        <div className="lg:col-span-2 border-[2px] border-black rounded-lg bg-white p-4 shadow-[3px_3px_0_black]">
+        <div className="lg:col-span-2 border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold">Budgets</h3>
             <button
@@ -107,7 +146,7 @@ export default function MoneyView() {
           </div>
           <div className="space-y-2">
             {budgetStats.map(({ budget, income, expenses, available }) => (
-              <div key={budget.id} className="border border-black/20 rounded p-2">
+              <div key={budget.id} className="border border-black/20 rounded-lg p-3 bg-[var(--off-white)]/70">
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
                     value={budget.name}
@@ -126,11 +165,17 @@ export default function MoneyView() {
                   </button>
                 </div>
                 <div className="text-xs mt-2 flex gap-3">
-                  <span>Income: ${income.toFixed(2)}</span>
-                  <span>Spend: ${expenses.toFixed(2)}</span>
+                  <span>Income: {moneyFmt(income)}</span>
+                  <span>Spend: {moneyFmt(expenses)}</span>
                   <span className={available < 0 ? 'text-[var(--brand-red)] font-bold' : 'text-[var(--brand-green)] font-bold'}>
-                    Available: ${available.toFixed(2)}
+                    Available: {moneyFmt(available)}
                   </span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-black/10 overflow-hidden">
+                  <div
+                    className={available < 0 ? 'h-full bg-[var(--brand-red)]' : 'h-full bg-[var(--brand-green)]'}
+                    style={{ width: `${Math.max(8, Math.min(100, ((budget.limit + income - Math.max(0, available * -1)) / Math.max(1, budget.limit + income)) * 100))}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -139,7 +184,7 @@ export default function MoneyView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="border-[2px] border-black rounded-lg bg-white p-4 shadow-[3px_3px_0_black]">
+        <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
           <h3 className="font-bold mb-3">Add Money Item / Simulation</h3>
           <div className="grid grid-cols-2 gap-2">
             <input
@@ -203,6 +248,9 @@ export default function MoneyView() {
                 linkedTaskId: entryDraft.linkedTaskId || null,
                 includedInBudget: true,
               });
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('starrlign:money-add'));
+              }
               setEntryDraft((prev) => ({ ...prev, title: '', amount: 0 }));
             }}
             className="mt-3 px-3 py-1.5 border-[2px] border-black rounded bg-[var(--brand-green)] text-white text-sm"
@@ -211,7 +259,7 @@ export default function MoneyView() {
           </button>
         </div>
 
-        <div className="border-[2px] border-black rounded-lg bg-white p-4 shadow-[3px_3px_0_black]">
+        <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
           <div className="flex items-center gap-2 mb-2"><Calculator className="w-4 h-4" /> If I buy this, can I afford it?</div>
           <p className="text-xs text-black/70 mb-2">Toggle “Included” to simulate purchases before you commit.</p>
           <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
@@ -220,7 +268,7 @@ export default function MoneyView() {
                 <div className="flex items-center gap-2">
                   <strong>{entry.title}</strong>
                   <span className="text-xs uppercase text-black/60">{entry.type}</span>
-                  <span className="ml-auto">${entry.amount.toFixed(2)}</span>
+                  <span className="ml-auto">{moneyFmt(entry.amount)}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <button
@@ -230,7 +278,15 @@ export default function MoneyView() {
                     {entry.includedInBudget ? 'Included' : 'Not included'}
                   </button>
                   <span className="text-xs">{entry.category}</span>
-                  <button onClick={() => deleteMoneyEntry(entry.id)} className="ml-auto text-[var(--brand-red)]">
+                  <button
+                    onClick={() => {
+                      deleteMoneyEntry(entry.id);
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new Event('starrlign:money-delete'));
+                      }
+                    }}
+                    className="ml-auto text-[var(--brand-red)]"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -241,7 +297,7 @@ export default function MoneyView() {
         </div>
       </div>
 
-      <div className="border-[2px] border-black rounded-lg bg-white p-4 shadow-[3px_3px_0_black]">
+      <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
         <div className="flex items-center gap-2 mb-3"><TrendingUp className="w-4 h-4" /> Investments (manual tracking)</div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
           <input placeholder="Symbol" value={positionDraft.symbol} onChange={(e) => setPositionDraft((p) => ({ ...p, symbol: e.target.value.toUpperCase() }))} className="border border-black rounded px-2 py-1" />
@@ -259,7 +315,10 @@ export default function MoneyView() {
             Add
           </button>
         </div>
-        <div className="text-sm mb-2">Portfolio value: <strong>${investmentSummary.totalValue.toFixed(2)}</strong> • P/L: <strong className={investmentSummary.pnl >= 0 ? 'text-[var(--brand-green)]' : 'text-[var(--brand-red)]'}>${investmentSummary.pnl.toFixed(2)}</strong></div>
+        <div className="text-sm mb-2 flex items-center gap-2">
+          <Target className="w-4 h-4" />
+          Portfolio value: <strong>{moneyFmt(investmentSummary.totalValue)}</strong> • P/L: <strong className={investmentSummary.pnl >= 0 ? 'text-[var(--brand-green)]' : 'text-[var(--brand-red)]'}>{moneyFmt(investmentSummary.pnl)}</strong>
+        </div>
         <div className="space-y-2">
           {investmentPositions.map((position) => {
             const pnl = position.shares * (position.currentPrice - position.avgCost);

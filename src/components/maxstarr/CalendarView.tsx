@@ -7,6 +7,17 @@ import { cn } from '@/lib/utils';
 const monthName = (date: Date) => date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 const toYmd = (date: Date) => date.toISOString().slice(0, 10);
 
+const projectColorClasses: Record<string, string> = {
+  red: 'bg-[var(--brand-red)] text-white border-[var(--brand-red)]',
+  blue: 'bg-[var(--brand-blue)] text-white border-[var(--brand-blue)]',
+  yellow: 'bg-[var(--brand-yellow)] text-black border-[var(--brand-yellow)]',
+  gray: 'bg-[var(--gray-400)] text-black border-[var(--gray-400)]',
+  green: 'bg-[var(--brand-green)] text-white border-[var(--brand-green)]',
+  purple: 'bg-[#a855f7] text-white border-[#a855f7]',
+  orange: 'bg-[#f97316] text-white border-[#f97316]',
+  pink: 'bg-[#ec4899] text-white border-[#ec4899]',
+};
+
 export default function CalendarView() {
   const { tasks, projects, projectCategories, tags, tagFilter, toggleTagFilter, clearTagFilter } = useStore();
   const [cursor, setCursor] = useState(() => new Date());
@@ -71,6 +82,11 @@ export default function CalendarView() {
     const key = toYmd(date);
     return { date, key, tasks: taskDates.get(key) || [] };
   });
+
+  const getTaskColorClass = (projectName: string) => {
+    const projectColor = projects.find((project) => project.name === projectName)?.color || 'yellow';
+    return projectColorClasses[projectColor] || projectColorClasses.yellow;
+  };
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-4">
@@ -145,7 +161,11 @@ export default function CalendarView() {
               <div className="text-xs font-bold mb-1">{day.date.getDate()}</div>
               <div className="space-y-1">
                 {day.tasks.slice(0, 4).map((task) => (
-                  <div key={`${day.key}-${task.id}`} className="text-[10px] p-1 rounded border border-black/20 bg-[var(--off-white)] truncate" title={task.title}>
+                  <div
+                    key={`${day.key}-${task.id}`}
+                    className={cn('text-[10px] p-1 rounded border truncate font-medium shadow-[1px_1px_0_black/20]', getTaskColorClass(task.project))}
+                    title={`${task.title} • ${task.project}`}
+                  >
                     {task.title}
                   </div>
                 ))}

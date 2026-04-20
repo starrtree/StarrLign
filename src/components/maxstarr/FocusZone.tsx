@@ -96,6 +96,9 @@ export default function FocusZone() {
 
   const handleOpenDetails = () => {
     if (focusTask) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:ui-open'));
+      }
       setEditingTaskId(focusTask.id);
       setDetailMode(true);
       setModalOpen(true);
@@ -104,6 +107,9 @@ export default function FocusZone() {
 
   const handleSwipeTask = (direction: 1 | -1) => {
     if (activeFocusTasks.length <= 1) return;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:task-swipe'));
+    }
     setSwipeDirection(direction);
     setFocusIndex((prev) => {
       const next = prev + direction;
@@ -119,6 +125,9 @@ export default function FocusZone() {
   };
 
   const handleSelectTask = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:ui-close'));
+    }
     setCurrentView('kanban');
   };
 
@@ -266,6 +275,14 @@ export default function FocusZone() {
   }, [focusTask]);
 
   const isDark = theme === 'dark';
+  const swipeX = useMotionValue(0);
+  const swipeRotate = useTransform(swipeX, [-260, 0, 260], [-10, 0, 10]);
+  const swipeLeftOpacity = useTransform(swipeX, [-220, -70, 0], [0.8, 0.45, 0]);
+  const swipeRightOpacity = useTransform(swipeX, [0, 70, 220], [0, 0.45, 0.8]);
+  const swipeProgress = useTransform(swipeX, [-220, 0, 220], [1, 0, 1]);
+
+  const previousTask = activeFocusTasks[(focusIndex - 1 + activeFocusTasks.length) % activeFocusTasks.length];
+  const nextTask = activeFocusTasks[(focusIndex + 1) % activeFocusTasks.length];
 
   const getGlowStyle = () => {
     if (progress === 0) return {};
@@ -356,6 +373,37 @@ export default function FocusZone() {
     >
       {activeFocusTasks.length > 1 && (
         <>
+          <motion.div
+            style={{ opacity: swipeLeftOpacity }}
+            className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-32 rounded-l-lg bg-gradient-to-r from-black/40 to-transparent z-10 flex items-center justify-center"
+          >
+            <span className="text-white text-[9px] md:text-xs uppercase tracking-[2px] font-bold">Next ⟶</span>
+          </motion.div>
+          <motion.div
+            style={{ opacity: swipeRightOpacity }}
+            className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-32 rounded-r-lg bg-gradient-to-l from-black/40 to-transparent z-10 flex items-center justify-center"
+          >
+            <span className="text-white text-[9px] md:text-xs uppercase tracking-[2px] font-bold">⟵ Previous</span>
+          </motion.div>
+          <div className="pointer-events-none absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 hidden md:block w-24 rounded-lg border-2 border-black/30 bg-white/20 p-2 backdrop-blur-md z-[1]">
+            <div className="text-[8px] uppercase tracking-[1.5px] text-white/80">Prev Task</div>
+            <div className="text-[10px] font-bold text-white truncate">{previousTask?.title || '—'}</div>
+          </div>
+          <div className="pointer-events-none absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 hidden md:block w-24 rounded-lg border-2 border-black/30 bg-white/20 p-2 backdrop-blur-md z-[1]">
+            <div className="text-[8px] uppercase tracking-[1.5px] text-white/80">Next Task</div>
+            <div className="text-[10px] font-bold text-white truncate">{nextTask?.title || '—'}</div>
+          </div>
+          <motion.div
+            style={{ opacity: swipeProgress }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-2 text-[9px] uppercase tracking-[2px] rounded-full border border-black/30 px-2 py-0.5 bg-black/20 text-white backdrop-blur-md z-20"
+          >
+            Swipe to cycle missions
+          </motion.div>
+        </>
+      )}
+
+      {activeFocusTasks.length > 1 && (
+        <>
           <button
             onClick={() => handleSwipeTask(-1)}
             className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/40 text-white p-1.5 rounded-full border border-white/20"
@@ -386,7 +434,7 @@ export default function FocusZone() {
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={handleDragEnd}
           style={{ x: swipeX, rotate: swipeRotate }}
-          whileDrag={{ scale: 1.015, cursor: 'grabbing' }}
+          whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
           className="contents"
         >
       {/* LEFT: Notes */}
