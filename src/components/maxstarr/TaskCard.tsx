@@ -3,8 +3,9 @@
 import { Task } from '@/lib/types';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Clock, Pencil, AlertTriangle } from 'lucide-react';
+import { Clock, Pencil, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface TaskCardProps {
   task: Task;
@@ -30,6 +31,7 @@ function getDeadlineStatus(due: string | undefined): 'overdue' | 'approaching' |
 
 export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode } = useStore();
+  const [isCelebrating, setIsCelebrating] = useState(false);
   
   // Get project color
   const project = projects.find(p => p.name === task.project);
@@ -49,10 +51,18 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const colors = colorMap[projectColor] || colorMap.yellow;
   const deadlineStatus = getDeadlineStatus(task.due);
   const duration = formatDuration(task.durationHours, task.durationMinutes);
+  const subtaskProgress = task.subtasks?.length
+    ? Math.round((task.subtasks.filter((subtask) => subtask.done).length / task.subtasks.length) * 100)
+    : 0;
 
   const handleQuickMove = (newStatus: Task['status'], e: React.MouseEvent) => {
     e.stopPropagation();
     updateTask(task.id, { status: newStatus });
+    if (newStatus === 'done' && typeof window !== 'undefined') {
+      setIsCelebrating(true);
+      setTimeout(() => setIsCelebrating(false), 1400);
+      window.dispatchEvent(new Event('starrlign:task-complete'));
+    }
     toast.success(`Task moved to ${newStatus.toUpperCase()}`);
   };
 
@@ -80,8 +90,10 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
       onClick={handleCardClick}
       className={cn(
         "border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]",
+        task.status === 'done' && "opacity-70 saturate-50",
         deadlineStatus === 'overdue' && "border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1",
-        deadlineStatus === 'approaching' && "border-[var(--brand-red)]"
+        deadlineStatus === 'approaching' && "border-[var(--brand-red)]",
+        isCelebrating && "card-gyrate"
       )}
       style={{ backgroundColor: colors.bg }}
       draggable
@@ -99,6 +111,13 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           )} />
         </div>
       )}
+
+      {task.status !== 'done' && (
+        <div className="absolute top-2 right-2 flex items-center gap-0.5 pointer-events-none">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--brand-yellow)] task-sparkle" />
+          <Sparkles className="w-2.5 h-2.5 text-white/90 task-sparkle" style={{ animationDelay: '220ms' }} />
+        </div>
+      )}
       
       {/* Priority Badge */}
       <span
@@ -113,9 +132,21 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
         {task.priority}
       </span>
 
+      {task.status === 'done' && (
+        <span
+          className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border border-black bg-[var(--brand-green)] text-white"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          COMPLETED
+        </span>
+      )}
+
       {/* Title */}
       <div 
-        className="text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]"
+        className={cn(
+          "text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]",
+          task.status === 'done' && "line-through"
+        )}
         style={{ color: colors.text }}
       >
         {task.title}
@@ -131,6 +162,25 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           <Clock className="w-3 h-3" />
           {duration}
         </div>
+
+        {/* Tags */}
+        {(task.linkedProjects?.length ? task.linkedProjects : [task.project]).slice(0, 2).map((projectName, i) => (
+          <span
+            key={`${projectName}-${i}`}
+            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/35 text-black font-semibold"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            📁 {projectName}
+          </span>
+        ))}
+        {(task.linkedProjects?.length || 1) > 2 && (
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/20 text-white"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            +{(task.linkedProjects || [task.project]).length - 2}
+          </span>
+        )}
 
         {/* Tags */}
         {task.tags.map((tag, i) => (
@@ -160,6 +210,18 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           </span>
         )}
       </div>
+
+      {task.subtasks?.length > 0 && (
+        <div className="mt-2">
+          <div className="flex justify-between text-[9px] font-bold mb-1" style={{ color: colors.textMuted, fontFamily: 'var(--font-space-mono), monospace' }}>
+            <span>SUBTASKS</span>
+            <span>{subtaskProgress}%</span>
+          </div>
+          <div className="h-1.5 rounded bg-black/25 overflow-hidden border border-black/40">
+            <div className="h-full bg-[var(--brand-green)] transition-all duration-300" style={{ width: `${subtaskProgress}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-black/20 flex-wrap">
