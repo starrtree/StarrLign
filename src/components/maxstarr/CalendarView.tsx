@@ -7,15 +7,15 @@ import { cn } from '@/lib/utils';
 const monthName = (date: Date) => date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 const toYmd = (date: Date) => date.toISOString().slice(0, 10);
 
-const projectColorClasses: Record<string, string> = {
-  red: 'bg-[var(--brand-red)] text-white border-[var(--brand-red)]',
-  blue: 'bg-[var(--brand-blue)] text-white border-[var(--brand-blue)]',
-  yellow: 'bg-[var(--brand-yellow)] text-black border-[var(--brand-yellow)]',
-  gray: 'bg-[var(--gray-400)] text-black border-[var(--gray-400)]',
-  green: 'bg-[var(--brand-green)] text-white border-[var(--brand-green)]',
-  purple: 'bg-[#a855f7] text-white border-[#a855f7]',
-  orange: 'bg-[#f97316] text-white border-[#f97316]',
-  pink: 'bg-[#ec4899] text-white border-[#ec4899]',
+const projectColorHex: Record<string, string> = {
+  red: '#ed1c24',
+  blue: '#0052b4',
+  yellow: '#ffd100',
+  gray: '#9ca3af',
+  green: '#22c55e',
+  purple: '#a855f7',
+  orange: '#f97316',
+  pink: '#ec4899',
 };
 
 export default function CalendarView() {
@@ -83,9 +83,9 @@ export default function CalendarView() {
     return { date, key, tasks: taskDates.get(key) || [] };
   });
 
-  const getTaskColorClass = (projectName: string) => {
+  const getTaskColor = (projectName: string) => {
     const projectColor = projects.find((project) => project.name === projectName)?.color || 'yellow';
-    return projectColorClasses[projectColor] || projectColorClasses.yellow;
+    return projectColorHex[projectColor] || projectColorHex.yellow;
   };
 
   return (
@@ -163,10 +163,14 @@ export default function CalendarView() {
                 {day.tasks.slice(0, 4).map((task) => (
                   <div
                     key={`${day.key}-${task.id}`}
-                    className={cn('text-[10px] p-1 rounded border truncate font-medium shadow-[1px_1px_0_black/20]', getTaskColorClass(task.project))}
+                    className="text-[10px] p-1.5 rounded border border-black/25 truncate font-medium bg-white text-black shadow-[1px_1px_0_black/15] flex items-center gap-1.5"
                     title={`${task.title} • ${task.project}`}
                   >
-                    {task.title}
+                    <span className="truncate flex-1">{task.title}</span>
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/25 flex-shrink-0"
+                      style={{ backgroundColor: getTaskColor(task.project) }}
+                    />
                   </div>
                 ))}
                 {day.tasks.length > 4 && <div className="text-[10px] text-black/60">+{day.tasks.length - 4} more</div>}
