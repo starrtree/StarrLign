@@ -453,6 +453,32 @@ function TaskModalContent({
             </div>
           </div>
 
+          {/* Timeframe */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={formData.startDate || ''}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                Event / End Date
+              </label>
+              <input
+                type="date"
+                value={formData.endDate || ''}
+                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none"
+              />
+            </div>
+          </div>
+
           {/* Due Date */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
