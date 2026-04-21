@@ -118,13 +118,30 @@ export default function DataProvider({ children }: { children: React.ReactNode }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--off-white)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[40px] mb-4 text-[var(--brand-yellow)]" style={{ animation: 'pulse 2s infinite ease-in-out' }}>
-            ★
-          </div>
-          <div className="text-sm text-[var(--gray-600)]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-            Loading your workspace...
+      <div className="min-h-screen bg-[var(--off-white)] flex items-center justify-center px-4">
+        <div className="text-center relative">
+          <div className="absolute -inset-8 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(255,209,0,0.24),transparent_55%)] pointer-events-none" />
+          <div className="relative border-[3px] border-black rounded-2xl px-8 py-7 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(255,255,255,0.75)_100%)] shadow-[8px_8px_0_black] overflow-hidden">
+            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-[var(--brand-yellow)]/35 blur-2xl" />
+            <div
+              className="text-[52px] md:text-[72px] leading-none font-black tracking-[4px] text-[var(--brand-yellow)]"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              ST<span className="inline-block starr-loader-star">★</span>RR
+            </div>
+            <div
+              className="text-[44px] md:text-[64px] -mt-1 leading-none font-black tracking-[5px] text-[var(--brand-red)]"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              LIGN
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <div className="h-[3px] w-[220px] md:w-[300px] rounded-full bg-gradient-to-r from-transparent via-[var(--brand-yellow)] to-[var(--brand-red)] starr-loader-arrow" />
+              <div className="w-0 h-0 border-y-[8px] border-y-transparent border-l-[14px] border-l-[var(--brand-red)]" />
+            </div>
+            <div className="text-xs mt-4 text-[var(--gray-600)] uppercase tracking-[2px]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Loading your workspace
+            </div>
           </div>
         </div>
       </div>

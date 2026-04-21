@@ -424,10 +424,25 @@ export default function FocusZone() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={focusTask.id}
-          initial={{ x: swipeDirection * 80, opacity: 0.4, scale: 0.98 }}
-          animate={{ x: 0, opacity: 1, scale: 1 }}
-          exit={{ x: swipeDirection * -80, opacity: 0.2, scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 250, damping: 24, mass: 0.95 }}
+          initial={{
+            x: swipeDirection > 0 ? 130 : -130,
+            opacity: 0.45,
+            scale: 0.9,
+            rotate: swipeDirection > 0 ? 5 : -5,
+          }}
+          animate={{
+            x: 0,
+            opacity: 1,
+            scale: [1.03, 1],
+            rotate: [swipeDirection > 0 ? -1.5 : 1.5, 0],
+          }}
+          exit={{
+            x: swipeDirection > 0 ? -220 : 220,
+            opacity: 0,
+            scale: [1, 1.06, 0.9],
+            rotate: swipeDirection > 0 ? -7 : 7,
+          }}
+          transition={{ duration: 0.36, times: [0, 1], ease: [0.25, 1, 0.3, 1] }}
           drag={activeFocusTasks.length > 1 ? 'x' : false}
           dragElastic={0.18}
           dragMomentum

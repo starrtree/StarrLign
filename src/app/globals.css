@@ -279,6 +279,23 @@ input[type="url"], textarea, [contenteditable="true"],
   }
 }
 
+@keyframes starrLoaderStar {
+  0%, 100% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 0 rgba(255,209,0,0)); }
+  35% { transform: rotate(-10deg) scale(1.1); filter: drop-shadow(0 0 14px rgba(255,209,0,0.8)); }
+  70% { transform: rotate(10deg) scale(1.04); filter: drop-shadow(0 0 8px rgba(255,209,0,0.5)); }
+}
+
+@keyframes starrArrowSweep {
+  0% { transform: scaleX(0.45); opacity: 0.55; transform-origin: left; }
+  60% { transform: scaleX(1); opacity: 1; transform-origin: left; }
+  100% { transform: scaleX(0.9); opacity: 0.75; transform-origin: right; }
+}
+
+@keyframes taskSparkle {
+  0%, 100% { transform: translateY(0) scale(0.75); opacity: 0.35; }
+  50% { transform: translateY(-3px) scale(1); opacity: 1; }
+}
+
 @keyframes strikethrough {
   from { width: 0; }
   to { width: 100%; }
@@ -428,6 +445,20 @@ input[type="url"], textarea, [contenteditable="true"],
   animation-name: confettiFall;
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   animation-fill-mode: both;
+}
+
+.starr-loader-star {
+  animation: starrLoaderStar 2.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.starr-loader-arrow {
+  animation: starrArrowSweep 1.7s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.task-sparkle {
+  animation: taskSparkle 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 209, 0, 0.8));
 }
 
 /* Card Shine Effect */

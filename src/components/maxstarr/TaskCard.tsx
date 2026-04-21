@@ -3,7 +3,7 @@
 import { Task } from '@/lib/types';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Clock, Pencil, AlertTriangle } from 'lucide-react';
+import { Clock, Pencil, AlertTriangle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -109,6 +109,13 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
             "w-4 h-4",
             deadlineStatus === 'overdue' ? "text-[var(--brand-red)]" : "text-[var(--brand-yellow)]"
           )} />
+        </div>
+      )}
+
+      {task.status !== 'done' && (
+        <div className="absolute top-2 right-2 flex items-center gap-0.5 pointer-events-none">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--brand-yellow)] task-sparkle" />
+          <Sparkles className="w-2.5 h-2.5 text-white/90 task-sparkle" style={{ animationDelay: '220ms' }} />
         </div>
       )}
       
