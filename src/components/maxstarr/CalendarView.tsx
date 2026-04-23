@@ -17,6 +17,16 @@ const projectColorHex: Record<string, string> = {
   orange: '#f97316',
   pink: '#ec4899',
 };
+const projectTextColor: Record<string, string> = {
+  red: 'text-white',
+  blue: 'text-white',
+  yellow: 'text-black',
+  gray: 'text-black',
+  green: 'text-white',
+  purple: 'text-white',
+  orange: 'text-white',
+  pink: 'text-white',
+};
 
 export default function CalendarView() {
   const { tasks, projects, projectCategories, tags, tagFilter, toggleTagFilter, clearTagFilter } = useStore();
@@ -83,9 +93,9 @@ export default function CalendarView() {
     return { date, key, tasks: taskDates.get(key) || [] };
   });
 
-  const getTaskColor = (projectName: string) => {
+  const getProjectColorKey = (projectName: string) => {
     const projectColor = projects.find((project) => project.name === projectName)?.color || 'yellow';
-    return projectColorHex[projectColor] || projectColorHex.yellow;
+    return projectColor;
   };
 
   return (
@@ -163,13 +173,17 @@ export default function CalendarView() {
                 {day.tasks.slice(0, 4).map((task) => (
                   <div
                     key={`${day.key}-${task.id}`}
-                    className="text-[10px] p-1.5 rounded border border-black/25 truncate font-medium bg-white text-black shadow-[1px_1px_0_black/15] flex items-center gap-1.5"
+                    className={cn(
+                      "text-[10px] p-1.5 rounded border border-black/25 truncate font-medium shadow-[1px_1px_0_black/15] flex items-center gap-1.5",
+                      projectTextColor[getProjectColorKey(task.project)] || 'text-black'
+                    )}
+                    style={{ backgroundColor: projectColorHex[getProjectColorKey(task.project)] || projectColorHex.yellow }}
                     title={`${task.title} • ${task.project}`}
                   >
                     <span className="truncate flex-1">{task.title}</span>
                     <span
                       className="w-3 h-3 rounded-full border border-black/25 flex-shrink-0"
-                      style={{ backgroundColor: getTaskColor(task.project) }}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
                     />
                   </div>
                 ))}

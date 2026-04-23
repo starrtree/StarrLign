@@ -18,6 +18,9 @@ import {
   TrendingUp,
   Trophy,
   Wallet2,
+  PiggyBank,
+  Coins,
+  Vault,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -104,6 +107,17 @@ export default function MoneyView() {
   const recentActivity = [...moneyEntries]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6);
+  const projectedYearEnd = useMemo(() => {
+    const now = new Date();
+    const monthsLeft = Math.max(1, 12 - (now.getMonth() + 1));
+    return simulatedBalance + (simulatedBalance * monthsLeft) + investmentSummary.totalValue + (investmentSummary.pnl * monthsLeft * 0.15);
+  }, [simulatedBalance, investmentSummary.totalValue, investmentSummary.pnl]);
+  const accountVisual = useMemo(() => {
+    const checking = simulatedBalance * 0.45;
+    const savings = simulatedBalance * 0.35;
+    const investing = simulatedBalance * 0.2 + investmentSummary.totalValue;
+    return { checking, savings, investing };
+  }, [simulatedBalance, investmentSummary.totalValue]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -116,13 +130,13 @@ export default function MoneyView() {
 
   return (
     <div className="max-w-[1250px] mx-auto space-y-5">
-      <div className="border-[2px] border-black rounded-2xl p-5 md:p-6 text-white shadow-[6px_6px_0_black] bg-[linear-gradient(140deg,#08295b_0%,#0052b4_35%,#4a8ff5_100%)] relative overflow-hidden">
+      <div className="border-[2px] border-black rounded-2xl p-5 md:p-6 text-white shadow-[6px_6px_0_black] bg-[linear-gradient(140deg,#05381f_0%,#0f7a42_45%,#22c55e_100%)] relative overflow-hidden">
         <div className="absolute -right-12 -top-12 w-40 h-40 bg-white/15 rounded-full blur-2xl" />
-        <div className="absolute -left-10 -bottom-16 w-44 h-44 bg-[var(--brand-yellow)]/20 rounded-full blur-2xl" />
+        <div className="absolute -left-10 -bottom-16 w-44 h-44 bg-[var(--brand-yellow)]/25 rounded-full blur-2xl" />
         <div className="flex flex-wrap gap-4 items-start justify-between relative z-10">
           <div>
             <div className="text-[10px] uppercase tracking-[2px] text-white/70">Money Lab // Gamified Finance</div>
-            <h2 className="text-3xl md:text-4xl" style={{ fontFamily: 'var(--font-display)' }}>STACK XP • BUILD WEALTH • CLEAR MISSIONS</h2>
+            <h2 className="text-3xl md:text-4xl" style={{ fontFamily: 'var(--font-display)' }}>STACK XP • BUILD WEALTH • RUN YOUR BANK</h2>
             <div className="mt-3 inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border border-white/40 bg-white/10">
               <Trophy className="w-3.5 h-3.5" /> Level {moneyLevel} Money Pilot
             </div>
@@ -140,6 +154,37 @@ export default function MoneyView() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(160deg,#ffffff_0%,#effff3_100%)] p-4 shadow-[3px_3px_0_black]">
+          <div className="text-[11px] uppercase tracking-[1.8px] text-black/60 mb-2 flex items-center gap-2"><Landmark className="w-4 h-4" /> My Bank</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><Wallet2 className="w-4 h-4 text-[var(--brand-blue)]" /> Checking</span><strong>{moneyFmt(accountVisual.checking)}</strong></div>
+            <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><PiggyBank className="w-4 h-4 text-[var(--brand-green)]" /> Savings</span><strong>{moneyFmt(accountVisual.savings)}</strong></div>
+            <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><Vault className="w-4 h-4 text-[var(--brand-yellow)]" /> Investments</span><strong>{moneyFmt(accountVisual.investing)}</strong></div>
+          </div>
+        </div>
+        <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(160deg,#ffffff_0%,#f6fff8_100%)] p-4 shadow-[3px_3px_0_black]">
+          <div className="text-[11px] uppercase tracking-[1.8px] text-black/60 mb-2 flex items-center gap-2"><Coins className="w-4 h-4 text-[var(--brand-green)]" /> Budget Buckets</div>
+          <div className="space-y-2">
+            {budgetStats.slice(0, 3).map(({ budget, available }) => (
+              <div key={budget.id} className="flex items-center justify-between text-sm rounded border border-black/15 px-2 py-1 bg-white">
+                <span>{budget.name}</span>
+                <span className={available >= 0 ? 'text-[var(--brand-green)] font-bold' : 'text-[var(--brand-red)] font-bold'}>{moneyFmt(available)}</span>
+              </div>
+            ))}
+            {budgetStats.length === 0 && <div className="text-sm text-black/60">Create a budget bucket to track it here.</div>}
+          </div>
+        </div>
+        <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(160deg,#ffffff_0%,#f0fff3_100%)] p-4 shadow-[3px_3px_0_black]">
+          <div className="text-[11px] uppercase tracking-[1.8px] text-black/60 mb-2 flex items-center gap-2"><Target className="w-4 h-4 text-[var(--brand-green)]" /> Fiscal Year Projection</div>
+          <div className="text-3xl font-extrabold text-[var(--brand-green)]">{moneyFmt(projectedYearEnd)}</div>
+          <div className="text-xs text-black/65 mt-1">Projected position by year-end if current monthly behavior remains similar.</div>
+          <div className="mt-2 h-2 rounded-full bg-black/10 overflow-hidden">
+            <div className="h-full bg-[linear-gradient(90deg,#16a34a_0%,#84cc16_100%)]" style={{ width: `${Math.min(100, Math.max(10, savingsRate + 15))}%` }} />
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="border-[2px] border-black rounded-xl bg-white p-3 shadow-[3px_3px_0_black]"><div className="text-[10px] uppercase tracking-[1.6px] text-black/60 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Income</div><div className="text-xl font-bold text-[var(--brand-green)]">{moneyFmt(totalIncome)}</div></div>
         <div className="border-[2px] border-black rounded-xl bg-white p-3 shadow-[3px_3px_0_black]"><div className="text-[10px] uppercase tracking-[1.6px] text-black/60 flex items-center gap-1"><ArrowDownRight className="w-3 h-3" /> Spend</div><div className="text-xl font-bold text-[var(--brand-red)]">{moneyFmt(totalSpent)}</div></div>
@@ -150,7 +195,7 @@ export default function MoneyView() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="xl:col-span-2 space-y-4">
-          <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
+          <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(180deg,#ffffff_0%,#f6fff8_100%)] p-4 shadow-[3px_3px_0_black]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold flex items-center gap-2"><Wallet2 className="w-4 h-4" /> Budget Missions</h3>
               <button onClick={() => addBudget({ id: uid(), name: `Custom ${budgets.length + 1}`, limit: 500 })} className="text-xs px-2 py-1 border-[2px] border-black rounded bg-[var(--brand-yellow)]">
@@ -182,7 +227,7 @@ export default function MoneyView() {
             </div>
           </div>
 
-          <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
+          <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(180deg,#ffffff_0%,#f8fffb_100%)] p-4 shadow-[3px_3px_0_black]">
             <h3 className="font-bold mb-3 flex items-center gap-2"><Banknote className="w-4 h-4" /> Log New Money Event</h3>
             <div className="grid grid-cols-2 gap-2">
               <input placeholder="Title" value={entryDraft.title} onChange={(e) => setEntryDraft((prev) => ({ ...prev, title: e.target.value }))} className="col-span-2 border border-black rounded px-2 py-1" />
@@ -229,7 +274,7 @@ export default function MoneyView() {
         </div>
 
         <div className="space-y-4">
-          <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
+          <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(180deg,#ffffff_0%,#f3fff5_100%)] p-4 shadow-[3px_3px_0_black]">
             <div className="flex items-center gap-2 mb-2"><Flame className="w-4 h-4 text-[var(--brand-red)]" /> Recent Money Activity</div>
             <div className="space-y-2 max-h-[255px] overflow-y-auto pr-1">
               {recentActivity.map((entry) => (
@@ -262,7 +307,7 @@ export default function MoneyView() {
             </div>
           </div>
 
-          <div className="border-[2px] border-black rounded-xl bg-white p-4 shadow-[3px_3px_0_black]">
+          <div className="border-[2px] border-black rounded-xl bg-[linear-gradient(180deg,#ffffff_0%,#f6fff8_100%)] p-4 shadow-[3px_3px_0_black]">
             <div className="flex items-center gap-2 mb-3"><TrendingUp className="w-4 h-4" /> Investment Arena</div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input placeholder="Symbol" value={positionDraft.symbol} onChange={(e) => setPositionDraft((p) => ({ ...p, symbol: e.target.value.toUpperCase() }))} className="border border-black rounded px-2 py-1" />

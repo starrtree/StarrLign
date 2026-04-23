@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { turso, initializeDatabase, isDatabaseAvailable, getDatabaseMode } from '@/lib/turso';
-import { Task, Project, ProjectCategory, Document } from '@/lib/types';
+import { Task, Project, ProjectCategory, Document, Budget, MoneyEntry, InvestmentPosition } from '@/lib/types';
 
 let dbInitialized = false;
 
@@ -95,12 +95,20 @@ export async function GET() {
     }));
 
     const tagsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'tags'");
+    const budgetsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'budgets'");
+    const moneyEntriesResult = await turso.execute("SELECT value FROM app_state WHERE key = 'moneyEntries'");
+    const investmentPositionsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'investmentPositions'");
+    const baseIncomeMonthlyResult = await turso.execute("SELECT value FROM app_state WHERE key = 'baseIncomeMonthly'");
     const tags = tagsResult.rows[0] ? parseJsonField<string[]>(tagsResult.rows[0].value, []) : [];
+    const budgets = budgetsResult.rows[0] ? parseJsonField<Budget[]>(budgetsResult.rows[0].value, []) : [];
+    const moneyEntries = moneyEntriesResult.rows[0] ? parseJsonField<MoneyEntry[]>(moneyEntriesResult.rows[0].value, []) : [];
+    const investmentPositions = investmentPositionsResult.rows[0] ? parseJsonField<InvestmentPosition[]>(investmentPositionsResult.rows[0].value, []) : [];
+    const baseIncomeMonthly = baseIncomeMonthlyResult.rows[0] ? Number(baseIncomeMonthlyResult.rows[0].value ?? 0) : 0;
 
     return NextResponse.json({
       success: true,
       databaseMode: getDatabaseMode(),
-      data: { tasks, projects, projectCategories, documents, tags },
+      data: { tasks, projects, projectCategories, documents, tags, budgets, moneyEntries, investmentPositions, baseIncomeMonthly },
     });
   } catch (error) {
     console.error('Error loading data:', error);
@@ -124,7 +132,7 @@ export async function POST(request: NextRequest) {
     await ensureDbInit();
 
     const body = await request.json();
-    const { tasks, projects, projectCategories, documents, tags } = body;
+    const { tasks, projects, projectCategories, documents, tags, budgets, moneyEntries, investmentPositions, baseIncomeMonthly } = body;
 
     const batchStatements: { sql: string; args: (string | number | null)[] }[] = [];
 
@@ -203,6 +211,22 @@ export async function POST(request: NextRequest) {
     batchStatements.push({
       sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('tags', ?)",
       args: [JSON.stringify(tags || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('budgets', ?)",
+      args: [JSON.stringify(budgets || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('moneyEntries', ?)",
+      args: [JSON.stringify(moneyEntries || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('investmentPositions', ?)",
+      args: [JSON.stringify(investmentPositions || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('baseIncomeMonthly', ?)",
+      args: [String(Number(baseIncomeMonthly || 0))],
     });
 
     await turso.batch(batchStatements);
