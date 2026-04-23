@@ -21,6 +21,7 @@ const initialTasks: Task[] = [
     tags: ['Focus', 'Vision'],
     progress: 0,
     notes: "What is the one thing that, if accomplished, would make everything else easier? Write your North Star here and let it guide your focus.",
+    dependencyTaskIds: [],
     subtasks: [
       { id: uuid(), text: "Clarify your #1 priority", done: false },
       { id: uuid(), text: "Break it into actionable steps", done: false },
@@ -121,6 +122,7 @@ const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => 
       task.linkedProjects && task.linkedProjects.length > 0
         ? [...task.linkedProjects]
         : [task.project].filter(Boolean),
+    dependencyTaskIds: task.dependencyTaskIds ? [...task.dependencyTaskIds] : [],
     tags: [...task.tags],
     subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
   })),
@@ -246,7 +248,8 @@ export const useStore = create<AppState>((set, get) => ({
       task.linkedProjects && task.linkedProjects.length > 0
         ? Array.from(new Set([task.project, ...task.linkedProjects]))
         : [task.project];
-    set((state) => ({ tasks: [...state.tasks, { ...task, linkedProjects }] }));
+    const dependencyTaskIds = task.dependencyTaskIds ? [...new Set(task.dependencyTaskIds.filter(Boolean))] : [];
+    set((state) => ({ tasks: [...state.tasks, { ...task, linkedProjects, dependencyTaskIds }] }));
     saveToDatabase(get());
   },
 
@@ -263,7 +266,10 @@ export const useStore = create<AppState>((set, get) => ({
           nextTask.linkedProjects && nextTask.linkedProjects.length > 0
             ? Array.from(new Set([nextTask.project, ...nextTask.linkedProjects]))
             : [nextTask.project];
-        updatedTask = { ...nextTask, linkedProjects: normalizedLinkedProjects };
+        const dependencyTaskIds = nextTask.dependencyTaskIds
+          ? [...new Set(nextTask.dependencyTaskIds.filter(Boolean).filter((depId) => depId !== id))]
+          : [];
+        updatedTask = { ...nextTask, linkedProjects: normalizedLinkedProjects, dependencyTaskIds };
         return updatedTask;
       });
 
@@ -328,7 +334,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteTask: (id) => {
     set((state) => ({
-      tasks: state.tasks.filter((task) => task.id !== id),
+      tasks: state.tasks
+        .filter((task) => task.id !== id)
+        .map((task) => ({
+          ...task,
+          dependencyTaskIds: (task.dependencyTaskIds || []).filter((depId) => depId !== id),
+        })),
     }));
     saveToDatabase(get());
   },
@@ -914,6 +925,7 @@ export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
   tags: [],
   progress: 0,
   notes: '',
+  dependencyTaskIds: [],
   subtasks: [],
   timerStartedAt: null,
   lastTimerStartAt: null,

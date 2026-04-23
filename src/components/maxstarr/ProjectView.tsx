@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, formatDuration, formatRelativeTime, calculateWordCount } from '@/lib/store';
 import { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -39,6 +39,8 @@ export default function ProjectView() {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(true);
   const [dancingProjectName, setDancingProjectName] = useState<string | null>(null);
+  const modularGridRef = useRef<HTMLDivElement | null>(null);
+  const [dependencyLines, setDependencyLines] = useState<Array<{ fromX: number; fromY: number; toX: number; toY: number; id: string }>>([]);
 
   useEffect(() => {
     const onProjectComplete = (event: Event) => {
@@ -68,6 +70,48 @@ export default function ProjectView() {
     () => projectTasks.filter((task) => task.status === 'done'),
     [projectTasks]
   );
+  const sameProjectDependencyLinks = useMemo(() => {
+    if (!selectedProject) return [];
+    const ids = new Set(activeProjectTasks.map((task) => task.id));
+    return activeProjectTasks.flatMap((task) =>
+      (task.dependencyTaskIds || [])
+        .filter((depId) => ids.has(depId))
+        .map((depId) => ({ from: task.id, to: depId, id: `${task.id}-${depId}` }))
+    );
+  }, [activeProjectTasks, selectedProject]);
+
+  useEffect(() => {
+    if (viewMode !== 'modular' || !modularGridRef.current || sameProjectDependencyLinks.length === 0) {
+      setDependencyLines([]);
+      return;
+    }
+
+    const computeLines = () => {
+      const rootRect = modularGridRef.current?.getBoundingClientRect();
+      if (!rootRect) return;
+      const nextLines = sameProjectDependencyLinks
+        .map((link) => {
+          const fromEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.from}\"]`);
+          const toEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.to}\"]`);
+          if (!fromEl || !toEl) return null;
+          const fromRect = fromEl.getBoundingClientRect();
+          const toRect = toEl.getBoundingClientRect();
+          return {
+            id: link.id,
+            fromX: fromRect.left + fromRect.width / 2 - rootRect.left,
+            fromY: fromRect.top + fromRect.height / 2 - rootRect.top,
+            toX: toRect.left + toRect.width / 2 - rootRect.left,
+            toY: toRect.top + toRect.height / 2 - rootRect.top,
+          };
+        })
+        .filter((line): line is { id: string; fromX: number; fromY: number; toX: number; toY: number } => Boolean(line));
+      setDependencyLines(nextLines);
+    };
+
+    computeLines();
+    window.addEventListener('resize', computeLines);
+    return () => window.removeEventListener('resize', computeLines);
+  }, [viewMode, activeProjectTasks, sameProjectDependencyLinks]);
 
   // Filter projects based on projectFilter
   const filteredProjects = projects.filter(p => {
@@ -728,10 +772,30 @@ export default function ProjectView() {
         </div>
       ) : viewMode === 'modular' ? (
         /* Modular View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activeProjectTasks.map(task => (
-            <TaskCard key={task.id} task={task} />
-          ))}
+        <div className="relative" ref={modularGridRef}>
+          {dependencyLines.length > 0 && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+              {dependencyLines.map((line) => (
+                <line
+                  key={line.id}
+                  x1={line.fromX}
+                  y1={line.fromY}
+                  x2={line.toX}
+                  y2={line.toY}
+                  stroke="rgba(255, 209, 0, 0.9)"
+                  strokeWidth="2"
+                  strokeDasharray="6 6"
+                />
+              ))}
+            </svg>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+            {activeProjectTasks.map(task => (
+              <div key={task.id} data-task-node={task.id}>
+                <TaskCard task={task} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         /* List View */

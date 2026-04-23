@@ -3,7 +3,7 @@
 import { Task } from '@/lib/types';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Clock, Pencil, AlertTriangle, Sparkles } from 'lucide-react';
+import { Clock, Pencil, AlertTriangle, Sparkles, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -30,7 +30,7 @@ function getDeadlineStatus(due: string | undefined): 'overdue' | 'approaching' |
 }
 
 export default function TaskCard({ task, onEdit }: TaskCardProps) {
-  const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode } = useStore();
+  const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode, tasks } = useStore();
   const [isCelebrating, setIsCelebrating] = useState(false);
   
   // Get project color
@@ -54,6 +54,11 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   const subtaskProgress = task.subtasks?.length
     ? Math.round((task.subtasks.filter((subtask) => subtask.done).length / task.subtasks.length) * 100)
     : 0;
+  const dependencyTasks = (task.dependencyTaskIds || [])
+    .map((depId) => tasks.find((candidate) => candidate.id === depId))
+    .filter((candidate): candidate is Task => Boolean(candidate));
+  const sameProjectDependencies = dependencyTasks.filter((dep) => dep.project === task.project).length;
+  const externalDependencies = dependencyTasks.length - sameProjectDependencies;
 
   const handleQuickMove = (newStatus: Task['status'], e: React.MouseEvent) => {
     e.stopPropagation();
@@ -207,6 +212,17 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
             }}
           >
             {task.due === 'idk yet' ? 'idk yet' : task.due === 'Ongoing' ? '∞ Ongoing' : task.due}
+          </span>
+        )}
+        {dependencyTasks.length > 0 && (
+          <span
+            className="text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded border border-black bg-black/20 text-white"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            title={`${sameProjectDependencies} in this project, ${externalDependencies} outside`}
+          >
+            <Link2 className="w-3 h-3" />
+            {sameProjectDependencies}
+            {externalDependencies > 0 ? ` +${externalDependencies}↗` : ''}
           </span>
         )}
       </div>

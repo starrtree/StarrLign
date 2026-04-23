@@ -66,6 +66,7 @@ export async function initializeDatabase() {
       title TEXT NOT NULL,
       project TEXT,
       linkedProjects TEXT DEFAULT '[]',
+      dependencyTaskIds TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
       startDate TEXT,
@@ -88,6 +89,9 @@ export async function initializeDatabase() {
   } catch {
     // Column already exists on upgraded databases.
   }
+  try {
+    await turso.execute(`ALTER TABLE tasks ADD COLUMN dependencyTaskIds TEXT DEFAULT '[]'`);
+  } catch {}
   try {
     await turso.execute(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
   } catch {}

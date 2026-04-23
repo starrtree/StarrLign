@@ -20,6 +20,7 @@ export interface Task {
   tags: string[];
   progress: number;
   notes: string;
+  dependencyTaskIds: string[];
   subtasks: Subtask[];
   timerStartedAt?: string | null;
   lastTimerStartAt?: string | null;

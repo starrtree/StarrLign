@@ -65,6 +65,7 @@ async function initializeRemoteDatabase() {
       title TEXT NOT NULL,
       project TEXT,
       linkedProjects TEXT DEFAULT '[]',
+      dependencyTaskIds TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
       status TEXT DEFAULT 'todo',
       startDate TEXT,
@@ -87,6 +88,9 @@ async function initializeRemoteDatabase() {
   } catch {
     // column already exists
   }
+  try {
+    await remoteClient.execute(`ALTER TABLE tasks ADD COLUMN dependencyTaskIds TEXT DEFAULT '[]'`);
+  } catch {}
   try {
     await remoteClient.execute(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
   } catch {}
@@ -163,6 +167,7 @@ async function readSnapshot() {
       title: String(row.title),
       project: row.project ? String(row.project) : '',
       linkedProjects: parseJson(row.linkedProjects, row.project ? [String(row.project)] : []),
+      dependencyTaskIds: parseJson(row.dependencyTaskIds, []),
       priority: row.priority ? String(row.priority) : 'medium',
       status: row.status ? String(row.status) : 'todo',
       startDate: row.startDate ? String(row.startDate) : '',
@@ -219,12 +224,13 @@ async function writeSnapshot(snapshot) {
 
   for (const task of snapshot.tasks) {
     batchStatements.push({
-      sql: 'INSERT INTO tasks (id, title, project, linkedProjects, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         task.id,
         task.title,
         task.project || null,
         JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
+        JSON.stringify(task.dependencyTaskIds || []),
         task.priority,
         task.status,
         task.startDate || null,

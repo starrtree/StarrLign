@@ -74,6 +74,7 @@ export default function TaskModal() {
         toast.success('Task nested');
       }}
       projects={projects}
+      tasks={tasks}
       allTags={allTags}
       onCreateTag={createTag}
       onDeleteTag={deleteTag}
@@ -90,6 +91,7 @@ function TaskModalContent({
   onDelete,
   onArchive,
   projects,
+  tasks,
   allTags,
   onCreateTag,
   onDeleteTag,
@@ -101,6 +103,7 @@ function TaskModalContent({
   onDelete: (taskId: string) => void;
   onArchive: (taskId: string) => void;
   projects: { id: string; name: string }[];
+  tasks: Task[];
   allTags: string[];
   onCreateTag: (tag: string) => void;
   onDeleteTag: (tag: string) => void;
@@ -112,6 +115,7 @@ function TaskModalContent({
         title: editingTask.title,
         project: editingTask.project,
         linkedProjects: editingTask.linkedProjects?.length ? [...editingTask.linkedProjects] : [editingTask.project],
+        dependencyTaskIds: editingTask.dependencyTaskIds?.length ? [...editingTask.dependencyTaskIds] : [],
         priority: editingTask.priority,
         status: editingTask.status,
         startDate: editingTask.startDate,
@@ -127,6 +131,7 @@ function TaskModalContent({
       title: '',
       project: currentProjectName,
       linkedProjects: [currentProjectName],
+      dependencyTaskIds: [],
       priority: 'medium',
       status: 'todo',
       startDate: '',
@@ -142,6 +147,10 @@ function TaskModalContent({
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [showStartDate, setShowStartDate] = useState(Boolean(editingTask?.startDate));
+  const dependencyOptions = useMemo(
+    () => tasks.filter((task) => !task.isArchived && task.id !== editingTask?.id),
+    [tasks, editingTask?.id]
+  );
 
   const handleSave = () => {
     if (!formData.title?.trim()) {
@@ -159,9 +168,10 @@ function TaskModalContent({
     const linkedProjects = (formData.linkedProjects || []).length > 0
       ? Array.from(new Set([formData.project || currentProjectName, ...(formData.linkedProjects || [])]))
       : [formData.project || currentProjectName];
+    const dependencyTaskIds = [...new Set((formData.dependencyTaskIds || []).filter((depId) => depId !== editingTask?.id))];
 
     onSave(
-      { ...formData, linkedProjects, subtasks },
+      { ...formData, linkedProjects, dependencyTaskIds, subtasks },
       !!editingTask,
       editingTask?.id
     );
@@ -376,6 +386,31 @@ function TaskModalContent({
                     }}
                   />
                   <span>{project.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Depends on tasks
+            </label>
+            <div className="max-h-[120px] overflow-y-auto border-[2px] border-[#3a3a3a] rounded-lg p-2 bg-[#222] space-y-1.5">
+              {dependencyOptions.length === 0 && <div className="text-xs text-white/40">No tasks available.</div>}
+              {dependencyOptions.map((task) => (
+                <label key={task.id} className="flex items-center gap-2 text-xs text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={(formData.dependencyTaskIds || []).includes(task.id)}
+                    onChange={(e) => {
+                      const selected = new Set(formData.dependencyTaskIds || []);
+                      if (e.target.checked) selected.add(task.id);
+                      else selected.delete(task.id);
+                      setFormData({ ...formData, dependencyTaskIds: Array.from(selected) });
+                    }}
+                  />
+                  <span className="truncate">{task.title}</span>
+                  <span className="ml-auto text-[10px] text-white/45">{task.project}</span>
                 </label>
               ))}
             </div>

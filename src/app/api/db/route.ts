@@ -44,6 +44,7 @@ export async function GET() {
       title: String(row.title),
       project: row.project ? String(row.project) : '',
       linkedProjects: parseJsonField<string[]>(row.linkedProjects, row.project ? [String(row.project)] : []),
+      dependencyTaskIds: parseJsonField<string[]>(row.dependencyTaskIds, []),
       priority: ((row.priority as Task['priority']) || 'medium'),
       status: ((row.status as Task['status']) || 'todo'),
       startDate: row.startDate ? String(row.startDate) : '',
@@ -130,12 +131,13 @@ export async function POST(request: NextRequest) {
     batchStatements.push({ sql: 'DELETE FROM tasks', args: [] });
     for (const task of (tasks || []) as Task[]) {
       batchStatements.push({
-        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         args: [
           task.id,
           task.title,
           task.project || null,
           JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
+          JSON.stringify(task.dependencyTaskIds || []),
           task.priority,
           task.status,
           task.startDate || null,
