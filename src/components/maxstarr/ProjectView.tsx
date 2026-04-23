@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, formatDuration, formatRelativeTime, calculateWordCount } from '@/lib/store';
 import { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -18,8 +18,11 @@ export default function ProjectView() {
     selectedProjectId, 
     setCurrentView, 
     updateTask, 
+    reorderTasksInProject,
     setProjectModalOpen, 
     setEditingProjectId, 
+    setEditingTaskId,
+    setDetailMode,
     documents, 
     setSelectedDocumentId,
     setModalOpen,
@@ -33,14 +36,82 @@ export default function ProjectView() {
   
   const [viewMode, setViewMode] = useState<ViewMode>('modular');
   const [showFilters, setShowFilters] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [dancingProjectName, setDancingProjectName] = useState<string | null>(null);
+  const modularGridRef = useRef<HTMLDivElement | null>(null);
+  const [dependencyLines, setDependencyLines] = useState<Array<{ fromX: number; fromY: number; toX: number; toY: number; id: string }>>([]);
+
+  useEffect(() => {
+    const onProjectComplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectName?: string }>).detail;
+      if (!detail?.projectName) return;
+      setDancingProjectName(detail.projectName);
+      setTimeout(() => setDancingProjectName(null), 1600);
+    };
+    window.addEventListener('starrlign:project-complete', onProjectComplete);
+    return () => window.removeEventListener('starrlign:project-complete', onProjectComplete);
+  }, []);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const taskBelongsToProject = (task: Task, projectName: string) =>
+    task.project === projectName || (task.linkedProjects || []).includes(projectName);
   const projectTasks = selectedProject 
-    ? tasks.filter(t => t.project === selectedProject.name && !t.isArchived)
+    ? tasks.filter(t => taskBelongsToProject(t, selectedProject.name) && !t.isArchived)
     : [];
   const projectDocuments = selectedProject
     ? documents.filter(d => d.projectId === selectedProject.id && !d.isArchived)
     : [];
+  const activeProjectTasks = useMemo(
+    () => projectTasks.filter((task) => task.status !== 'done'),
+    [projectTasks]
+  );
+  const completedProjectTasks = useMemo(
+    () => projectTasks.filter((task) => task.status === 'done'),
+    [projectTasks]
+  );
+  const sameProjectDependencyLinks = useMemo(() => {
+    if (!selectedProject) return [];
+    const ids = new Set(activeProjectTasks.map((task) => task.id));
+    return activeProjectTasks.flatMap((task) =>
+      (task.dependencyTaskIds || [])
+        .filter((depId) => ids.has(depId))
+        .map((depId) => ({ from: task.id, to: depId, id: `${task.id}-${depId}` }))
+    );
+  }, [activeProjectTasks, selectedProject]);
+
+  useEffect(() => {
+    if (viewMode !== 'modular' || !modularGridRef.current || sameProjectDependencyLinks.length === 0) {
+      setDependencyLines([]);
+      return;
+    }
+
+    const computeLines = () => {
+      const rootRect = modularGridRef.current?.getBoundingClientRect();
+      if (!rootRect) return;
+      const nextLines = sameProjectDependencyLinks
+        .map((link) => {
+          const fromEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.from}\"]`);
+          const toEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.to}\"]`);
+          if (!fromEl || !toEl) return null;
+          const fromRect = fromEl.getBoundingClientRect();
+          const toRect = toEl.getBoundingClientRect();
+          return {
+            id: link.id,
+            fromX: fromRect.left + fromRect.width / 2 - rootRect.left,
+            fromY: fromRect.top + fromRect.height / 2 - rootRect.top,
+            toX: toRect.left + toRect.width / 2 - rootRect.left,
+            toY: toRect.top + toRect.height / 2 - rootRect.top,
+          };
+        })
+        .filter((line): line is { id: string; fromX: number; fromY: number; toX: number; toY: number } => Boolean(line));
+      setDependencyLines(nextLines);
+    };
+
+    computeLines();
+    window.addEventListener('resize', computeLines);
+    return () => window.removeEventListener('resize', computeLines);
+  }, [viewMode, activeProjectTasks, sameProjectDependencyLinks]);
 
   // Filter projects based on projectFilter
   const filteredProjects = projects.filter(p => {
@@ -112,7 +183,7 @@ export default function ProjectView() {
 
   // Project card for grid view
   const ProjectCard = ({ project }: { project: typeof projects[0] }) => {
-    const projectTasks = tasks.filter(t => t.project === project.name && !t.isArchived);
+    const projectTasks = tasks.filter(t => taskBelongsToProject(t, project.name) && !t.isArchived);
     const projectTaskCount = projectTasks.length;
     
     // Calculate progress including subtasks
@@ -151,7 +222,8 @@ export default function ProjectView() {
         onClick={() => setSelectedProjectId(project.id)}
         className={cn(
           "p-5 border-[2px] border-black rounded-lg cursor-pointer transition-all duration-200 hover:shadow-[5px_5px_0_black] hover:translate-y-[-2px] group relative",
-          hasApproachingDeadline && "ring-2 ring-[var(--brand-red)] ring-offset-1"
+          hasApproachingDeadline && "ring-2 ring-[var(--brand-red)] ring-offset-1",
+          dancingProjectName === project.name && "card-gyrate"
         )}
         style={{ 
           backgroundColor: cardColor,
@@ -392,6 +464,7 @@ export default function ProjectView() {
     done: projectTasks.filter(t => t.status === 'done').length,
     review: projectTasks.filter(t => t.status === 'review').length,
     high: projectTasks.filter(t => t.priority === 'high').length,
+    shared: projectTasks.filter(t => (t.linkedProjects || []).length > 1).length,
   };
 
   const handleBack = () => {
@@ -406,18 +479,48 @@ export default function ProjectView() {
   };
 
   // List Item Component
-  const TaskListItem = ({ task }: { task: Task }) => {
+  const TaskListItem = ({ task, muted = false }: { task: Task; muted?: boolean }) => {
     const duration = formatDuration(task.durationHours, task.durationMinutes);
-    const textColor = selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
-    const textColorMuted = selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
+    const textColor = muted
+      ? 'text-[color:var(--completed-text,#111)]'
+      : selectedProject.color === 'yellow' ? 'text-black' : 'text-white';
+    const textColorMuted = muted
+      ? 'text-[color:var(--completed-text-muted,rgba(17,17,17,0.7))]'
+      : selectedProject.color === 'yellow' ? 'text-black/60' : 'text-white/60';
     
     const handleQuickMove = (newStatus: Task['status']) => {
       updateTask(task.id, { status: newStatus });
       toast.success(`Moved to ${newStatus}`);
     };
 
+    const handleOpenTask = () => {
+      setEditingTaskId(task.id);
+      setDetailMode(true);
+      setModalOpen(true);
+    };
+
+    const handleEditTask = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingTaskId(task.id);
+      setDetailMode(false);
+      setModalOpen(true);
+    };
+
     return (
-      <div className="flex items-center gap-4 p-3 border-b-[1px] border-black/20 hover:bg-black/10 transition-colors group">
+      <div
+        onClick={handleOpenTask}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = 'move';
+          setDraggedTaskId(task.id);
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleTaskDrop(task.id);
+        }}
+        className="flex items-center gap-4 p-3 border-b-[1px] border-black/20 hover:bg-black/10 transition-colors group cursor-pointer"
+      >
         {/* Status indicator */}
         <div
           onClick={() => handleQuickMove(task.status === 'done' ? 'todo' : 'done')}
@@ -492,9 +595,19 @@ export default function ProjectView() {
         
         {/* Actions */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleEditTask}
+            className="text-[9px] px-2 py-1 bg-white/80 text-black rounded border-[1.5px] border-black"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            EDIT
+          </button>
           {task.status !== 'doing' && (
             <button
-              onClick={() => handleQuickMove('doing')}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleQuickMove('doing');
+              }}
               className="text-[9px] px-2 py-1 bg-[var(--brand-blue)] text-white rounded border-[1.5px] border-black"
               style={{ fontFamily: 'var(--font-space-mono), monospace' }}
             >
@@ -506,6 +619,13 @@ export default function ProjectView() {
     );
   };
 
+  const handleTaskDrop = (targetTaskId: string) => {
+    if (!draggedTaskId || !selectedProject) return;
+    reorderTasksInProject(selectedProject.name, draggedTaskId, targetTaskId);
+    setDraggedTaskId(null);
+    toast.success('Task order updated');
+  };
+
   const projectColor = colorMap[selectedProject.color] || colorMap.gray;
 
   return (
@@ -515,8 +635,8 @@ export default function ProjectView() {
         className="border-[2px] border-black rounded-lg shadow-[4px_4px_0_black] overflow-hidden mb-4"
         style={{ backgroundColor: projectColor }}
       >
-        <div className="bg-black px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-black px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={handleBack}
               className="flex items-center gap-1 text-[10px] px-2.5 py-1.5 bg-[var(--brand-blue)] text-white border-[2px] border-black rounded cursor-pointer transition-all hover:bg-[var(--brand-blue-dark)] shadow-[2px_2px_0_var(--brand-yellow)]"
@@ -526,7 +646,10 @@ export default function ProjectView() {
             </button>
             <span className="text-xl">{selectedProject.icon}</span>
             <h2
-              className="text-xl text-[var(--brand-yellow)] tracking-wide"
+              className={cn(
+                "text-base md:text-xl text-[var(--brand-yellow)] tracking-wide whitespace-nowrap overflow-x-auto no-scrollbar min-w-0",
+                dancingProjectName === selectedProject.name && "card-gyrate"
+              )}
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {selectedProject.name}
@@ -539,7 +662,7 @@ export default function ProjectView() {
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-between md:justify-end">
             {/* View Toggle */}
             <div className="flex items-center gap-1 bg-white/20 rounded-lg p-1">
               <button
@@ -608,6 +731,14 @@ export default function ProjectView() {
               <span className="font-bold">{stats.done}</span> Done
             </span>
           </div>
+          {stats.shared > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[var(--brand-blue)]" />
+              <span className={cn("text-xs", selectedProject.color === 'yellow' ? "text-black/70" : "text-white/80")} style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                <span className="font-bold">{stats.shared}</span> Shared
+              </span>
+            </div>
+          )}
           {stats.high > 0 && (
             <div className="flex items-center gap-2 ml-auto">
               <AlertCircle className="w-4 h-4 text-[var(--brand-red)]" />
@@ -641,10 +772,30 @@ export default function ProjectView() {
         </div>
       ) : viewMode === 'modular' ? (
         /* Modular View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projectTasks.map(task => (
-            <TaskCard key={task.id} task={task} />
-          ))}
+        <div className="relative" ref={modularGridRef}>
+          {dependencyLines.length > 0 && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+              {dependencyLines.map((line) => (
+                <line
+                  key={line.id}
+                  x1={line.fromX}
+                  y1={line.fromY}
+                  x2={line.toX}
+                  y2={line.toY}
+                  stroke="rgba(255, 209, 0, 0.9)"
+                  strokeWidth="2"
+                  strokeDasharray="6 6"
+                />
+              ))}
+            </svg>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+            {activeProjectTasks.map(task => (
+              <div key={task.id} data-task-node={task.id}>
+                <TaskCard task={task} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         /* List View */
@@ -653,15 +804,45 @@ export default function ProjectView() {
           style={{ backgroundColor: projectColor }}
         >
           <div className="divide-y divide-black/20">
-            {projectTasks
+            {activeProjectTasks
               .sort((a, b) => {
-                const statusOrder = { doing: 0, todo: 1, review: 2, done: 3 };
-                return statusOrder[a.status] - statusOrder[b.status];
+                const statusOrder = { doing: 0, review: 1, todo: 2, done: 3 };
+                const priorityOrder = { high: 0, medium: 1, low: 2 };
+                const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+                if (statusDiff !== 0) return statusDiff;
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                if (priorityDiff !== 0) return priorityDiff;
+                const aDate = a.due && a.due !== 'idk yet' && a.due !== 'Ongoing' ? new Date(a.due).getTime() : Number.MAX_SAFE_INTEGER;
+                const bDate = b.due && b.due !== 'idk yet' && b.due !== 'Ongoing' ? new Date(b.due).getTime() : Number.MAX_SAFE_INTEGER;
+                return aDate - bDate;
               })
               .map(task => (
                 <TaskListItem key={task.id} task={task} />
               ))}
           </div>
+        </div>
+      )}
+
+      {completedProjectTasks.length > 0 && (
+        <div className="mt-4 border-[2px] border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+          <button
+            onClick={() => setShowCompleted((prev) => !prev)}
+            className="w-full px-4 py-2 bg-[var(--brand-green)]/30 text-left text-xs font-bold tracking-wider flex items-center justify-between"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
+            <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
+          </button>
+          {showCompleted && (
+            <div
+              className="divide-y divide-black/20 bg-[var(--brand-green)]/10 dark:bg-[#0f2d16]"
+              style={{ ['--completed-text' as string]: '#b6f5c9', ['--completed-text-muted' as string]: '#8dd6a4' }}
+            >
+              {completedProjectTasks.map((task) => (
+                <TaskListItem key={task.id} task={task} muted />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -714,4 +895,3 @@ export default function ProjectView() {
     </div>
   );
 }
-
