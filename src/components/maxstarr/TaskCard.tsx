@@ -10,6 +10,8 @@ import { useState } from 'react';
 interface TaskCardProps {
   task: Task;
   onEdit?: () => void;
+  dependencyAnchorState?: 'idle' | 'selected' | 'linked';
+  onDependencyAnchorClick?: (taskId: string) => void;
 }
 
 // Helper function to check if deadline is approaching (within 3 days) or overdue
@@ -29,7 +31,7 @@ function getDeadlineStatus(due: string | undefined): 'overdue' | 'approaching' |
   return 'ok';
 }
 
-export default function TaskCard({ task, onEdit }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle', onDependencyAnchorClick }: TaskCardProps) {
   const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode, tasks } = useStore();
   const [isCelebrating, setIsCelebrating] = useState(false);
   
@@ -123,6 +125,24 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           <Sparkles className="w-2.5 h-2.5 text-white/90 task-sparkle" style={{ animationDelay: '220ms' }} />
         </div>
       )}
+
+      <button
+        type="button"
+        data-task-anchor={task.id}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDependencyAnchorClick?.(task.id);
+        }}
+        className={cn(
+          "absolute top-2 left-2 w-5 h-5 rounded-full border-2 border-dashed border-black flex items-center justify-center transition-all",
+          dependencyAnchorState === 'selected' && "bg-[var(--brand-yellow)] scale-110",
+          dependencyAnchorState === 'linked' && "bg-[var(--brand-yellow)]/80",
+          dependencyAnchorState === 'idle' && "bg-white/35"
+        )}
+        title="Link task dependencies"
+      >
+        ★
+      </button>
       
       {/* Priority Badge */}
       <span

@@ -25,6 +25,7 @@ export default function ProjectView() {
     setDetailMode,
     documents, 
     setSelectedDocumentId,
+    createDocument,
     setModalOpen,
     setAutoSetProjectForTask,
     projectCategories,
@@ -41,6 +42,7 @@ export default function ProjectView() {
   const [dancingProjectName, setDancingProjectName] = useState<string | null>(null);
   const modularGridRef = useRef<HTMLDivElement | null>(null);
   const [dependencyLines, setDependencyLines] = useState<Array<{ fromX: number; fromY: number; toX: number; toY: number; id: string }>>([]);
+  const [pendingDependencySourceTaskId, setPendingDependencySourceTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const onProjectComplete = (event: Event) => {
@@ -91,8 +93,8 @@ export default function ProjectView() {
       if (!rootRect) return;
       const nextLines = sameProjectDependencyLinks
         .map((link) => {
-          const fromEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.from}\"]`);
-          const toEl = modularGridRef.current?.querySelector(`[data-task-node=\"${link.to}\"]`);
+          const fromEl = modularGridRef.current?.querySelector(`[data-task-anchor=\"${link.from}\"]`);
+          const toEl = modularGridRef.current?.querySelector(`[data-task-anchor=\"${link.to}\"]`);
           if (!fromEl || !toEl) return null;
           const fromRect = fromEl.getBoundingClientRect();
           const toRect = toEl.getBoundingClientRect();
@@ -112,6 +114,40 @@ export default function ProjectView() {
     window.addEventListener('resize', computeLines);
     return () => window.removeEventListener('resize', computeLines);
   }, [viewMode, activeProjectTasks, sameProjectDependencyLinks]);
+
+  useEffect(() => {
+    setPendingDependencySourceTaskId(null);
+  }, [selectedProjectId, viewMode]);
+
+  const handleTaskAnchorClick = (taskId: string) => {
+    if (!pendingDependencySourceTaskId) {
+      setPendingDependencySourceTaskId(taskId);
+      return;
+    }
+
+    if (pendingDependencySourceTaskId === taskId) {
+      setPendingDependencySourceTaskId(null);
+      return;
+    }
+
+    const sourceTask = activeProjectTasks.find((task) => task.id === pendingDependencySourceTaskId);
+    if (!sourceTask) {
+      setPendingDependencySourceTaskId(null);
+      return;
+    }
+
+    const existing = new Set(sourceTask.dependencyTaskIds || []);
+    if (existing.has(taskId)) {
+      existing.delete(taskId);
+      toast.success('Dependency link removed');
+    } else {
+      existing.add(taskId);
+      toast.success('Dependency link created');
+    }
+
+    updateTask(sourceTask.id, { dependencyTaskIds: Array.from(existing) });
+    setPendingDependencySourceTaskId(null);
+  };
 
   // Filter projects based on projectFilter
   const filteredProjects = projects.filter(p => {
@@ -782,9 +818,9 @@ export default function ProjectView() {
                   y1={line.fromY}
                   x2={line.toX}
                   y2={line.toY}
-                  stroke="rgba(255, 209, 0, 0.9)"
-                  strokeWidth="2"
-                  strokeDasharray="6 6"
+                  stroke="rgba(255, 255, 255, 0.35)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 5"
                 />
               ))}
             </svg>
@@ -792,7 +828,17 @@ export default function ProjectView() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
             {activeProjectTasks.map(task => (
               <div key={task.id} data-task-node={task.id}>
-                <TaskCard task={task} />
+                <TaskCard
+                  task={task}
+                  dependencyAnchorState={
+                    pendingDependencySourceTaskId === task.id
+                      ? 'selected'
+                      : (task.dependencyTaskIds || []).length > 0
+                        ? 'linked'
+                        : 'idle'
+                  }
+                  onDependencyAnchorClick={handleTaskAnchorClick}
+                />
               </div>
             ))}
           </div>
@@ -845,6 +891,28 @@ export default function ProjectView() {
           )}
         </div>
       )}
+
+      <div className="mt-6 border-[2px] border-black rounded-lg p-4 shadow-[3px_3px_0_black] bg-white">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[2px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Project Documents
+            </div>
+            <div className="text-sm font-semibold">Always available</div>
+          </div>
+          <button
+            onClick={() => {
+              if (!selectedProject) return;
+              createDocument(selectedProject.id);
+              setCurrentView('documents');
+            }}
+            className="px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg hover:bg-[var(--brand-blue-dark)] transition-all cursor-pointer shadow-[2px_2px_0_black]"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> + ADD DOCUMENT
+          </button>
+        </div>
+      </div>
 
       {/* Project Documents Section */}
       {projectDocuments.length > 0 && (

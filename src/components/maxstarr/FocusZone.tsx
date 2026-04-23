@@ -32,6 +32,7 @@ export default function FocusZone() {
   );
   const [focusIndex, setFocusIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState(1);
+  const [focusLayout, setFocusLayout] = useState<'single' | 'multi'>('single');
   const touchStartXRef = useRef<number | null>(null);
   const focusTask = activeFocusTasks[focusIndex] ?? activeFocusTasks[0];
 
@@ -283,6 +284,14 @@ export default function FocusZone() {
 
   const previousTask = activeFocusTasks[(focusIndex - 1 + activeFocusTasks.length) % activeFocusTasks.length];
   const nextTask = activeFocusTasks[(focusIndex + 1) % activeFocusTasks.length];
+  const fannedTasks = useMemo(() => {
+    if (activeFocusTasks.length === 0) return [];
+    const base = [focusIndex - 1, focusIndex, focusIndex + 1];
+    return base.map((index) => {
+      const normalizedIndex = (index + activeFocusTasks.length) % activeFocusTasks.length;
+      return activeFocusTasks[normalizedIndex];
+    });
+  }, [activeFocusTasks, focusIndex]);
 
   const getGlowStyle = () => {
     if (progress === 0) return {};
@@ -371,6 +380,27 @@ export default function FocusZone() {
         ...getGlowStyle(),
       }}
     >
+      <div className="absolute top-2 right-2 z-30 flex items-center gap-1 rounded-full border border-black/25 bg-black/20 p-1 backdrop-blur-sm">
+        <button
+          onClick={() => setFocusLayout('single')}
+          className={cn(
+            "px-2 py-1 text-[9px] rounded-full border",
+            focusLayout === 'single' ? "bg-[var(--brand-yellow)] text-black border-black" : "bg-transparent text-white border-white/35"
+          )}
+        >
+          Single
+        </button>
+        <button
+          onClick={() => setFocusLayout('multi')}
+          className={cn(
+            "px-2 py-1 text-[9px] rounded-full border",
+            focusLayout === 'multi' ? "bg-[var(--brand-yellow)] text-black border-black" : "bg-transparent text-white border-white/35"
+          )}
+        >
+          Multi
+        </button>
+      </div>
+
       {activeFocusTasks.length > 1 && (
         <>
           <motion.div
@@ -421,6 +451,44 @@ export default function FocusZone() {
         </>
       )}
 
+      {focusLayout === 'multi' ? (
+        <div className="relative min-h-[420px] flex items-center justify-center">
+          {fannedTasks.map((task, idx) => {
+            if (!task) return null;
+            const offset = idx - 1;
+            const isCenter = offset === 0;
+            return (
+              <motion.button
+                key={task.id}
+                onClick={() => setFocusIndex(activeFocusTasks.findIndex((candidate) => candidate.id === task.id))}
+                whileHover={{ y: -8, scale: isCenter ? 1.03 : 1.02 }}
+                className={cn(
+                  "absolute w-[250px] md:w-[320px] rounded-xl border-[3px] border-black text-left p-4 shadow-[4px_4px_0_black] transition-all",
+                  isCenter ? "z-20 bg-white/95" : "z-10 bg-white/80"
+                )}
+                style={{
+                  transform: `translateX(${offset * 180}px) rotate(${offset * 10}deg)`,
+                  opacity: isCenter ? 1 : 0.75,
+                }}
+              >
+                <div className="text-[9px] uppercase tracking-[1.6px] text-black/60 mb-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                  {isCenter ? 'Current Focus' : 'Deck'}
+                </div>
+                <div className="text-lg font-bold leading-tight mb-2">{task.title}</div>
+                <div className="text-[11px] text-black/60 flex items-center justify-between">
+                  <span>{task.project}</span>
+                  <span>{Math.round(task.progress || 0)}%</span>
+                </div>
+                {(task.dependencyTaskIds || []).length > 0 && (
+                  <div className="mt-2 text-[10px] text-black/70" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                    ★ {(task.dependencyTaskIds || []).length} linked task{(task.dependencyTaskIds || []).length === 1 ? '' : 's'}
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      ) : (
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={focusTask.id}
@@ -704,6 +772,7 @@ export default function FocusZone() {
       </div>
         </motion.div>
       </AnimatePresence>
+      )}
     </div>
   );
 }
