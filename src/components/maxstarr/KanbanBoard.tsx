@@ -5,7 +5,7 @@ import { Task } from '@/lib/types';
 import TaskCard from './TaskCard';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 
 interface TagFilterBadgeProps {
   tag: string;
@@ -115,7 +115,8 @@ function KanbanColumn({ id, label, headerBg, bodyBg, countBg, countText, tasks, 
 }
 
 export default function KanbanBoard() {
-  const { tasks, updateTask, tagFilter, clearTagFilter, searchQuery } = useStore();
+  const { tasks, projects, projectCategories, tags, updateTask, tagFilter, toggleTagFilter, clearTagFilter, searchQuery } = useStore();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
 
   // Filter tasks by archive status, tag filter, and search query
   const activeTasks = tasks.filter(t => {
@@ -127,6 +128,15 @@ export default function KanbanBoard() {
       if (!hasAllTags) return false;
     }
     
+    if (selectedCategory !== 'all') {
+      const belongsToCategory = projects.some(
+        (project) =>
+          project.category === selectedCategory &&
+          (project.name === t.project || (t.linkedProjects || []).includes(project.name))
+      );
+      if (!belongsToCategory) return false;
+    }
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -181,6 +191,62 @@ export default function KanbanBoard() {
 
   return (
     <div className="space-y-4">
+      <div className="bg-[var(--brand-blue)] border-[2px] border-black rounded-lg shadow-[3px_3px_0_black] p-3 md:p-4 space-y-3">
+        <div className="flex items-center gap-2 text-[var(--brand-yellow)]">
+          <Filter className="w-4 h-4" />
+          <span className="text-[11px] tracking-wider" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            FILTER ALL TASKS
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <label
+            className="text-[10px] text-white/80"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            Category:
+          </label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="text-[11px] px-2.5 py-1.5 border-[2px] border-black rounded bg-[var(--brand-yellow)] text-black"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <option value="all">All categories</option>
+            {projectCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          {selectedCategory !== 'all' && (
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className="text-[10px] px-2 py-1 bg-white/20 text-white border border-white/30 rounded"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              Reset category
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {tags.slice(0, 14).map((tag) => (
+            <button
+              key={tag}
+              onClick={() => toggleTagFilter(tag)}
+              className={cn(
+                "text-[10px] px-2 py-1 border-[1.5px] border-black rounded transition-colors",
+                tagFilter.includes(tag)
+                  ? "bg-[var(--brand-red)] text-white"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              )}
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Tag Filter Indicator */}
       {tagFilter.length > 0 && (
         <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -226,4 +292,3 @@ export default function KanbanBoard() {
     </div>
   );
 }
-
