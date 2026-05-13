@@ -353,6 +353,8 @@ export default function FocusZone() {
 
   const duration = formatDuration(focusTask.durationHours, focusTask.durationMinutes);
   const textColor = projectColor === 'yellow' ? 'black' : 'white';
+  const swipeX = useMotionValue(0);
+  const swipeRotate = useTransform(swipeX, [-260, 0, 260], [-10, 0, 10]);
 
   return (
     <div
