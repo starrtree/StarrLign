@@ -4,7 +4,9 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Plus, Trash2, ExternalLink, Check, FolderOpen, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Check, FolderOpen, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnimatePresence, PanInfo, motion, useMotionValue, useTransform } from 'framer-motion';
+import { playAppSound } from '@/lib/sound';
 
 export default function FocusZone() {
   const { 
@@ -16,13 +18,29 @@ export default function FocusZone() {
     deleteSubtask,
     setEditingTaskId, 
     setModalOpen, 
+    setDetailMode,
     setCurrentView,
     setSelectedProjectId,
     projects,
-    theme
+    theme,
+    soundEnabled
   } = useStore();
   
-  const focusTask = tasks.find(t => t.status === 'doing');
+  const activeFocusTasks = useMemo(
+    () => tasks.filter(t => t.status === 'doing' && !t.isArchived),
+    [tasks]
+  );
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState(1);
+  const [focusLayout, setFocusLayout] = useState<'single' | 'multi'>('single');
+  const touchStartXRef = useRef<number | null>(null);
+  const focusTask = activeFocusTasks[focusIndex] ?? activeFocusTasks[0];
+
+  useEffect(() => {
+    if (focusIndex > activeFocusTasks.length - 1) {
+      setFocusIndex(Math.max(activeFocusTasks.length - 1, 0));
+    }
+  }, [activeFocusTasks.length, focusIndex]);
 
   // Local state for editing
   const [editingNotes, setEditingNotes] = useState(false);
@@ -30,6 +48,7 @@ export default function FocusZone() {
   const [editingSubtaskText, setEditingSubtaskText] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [isCardCelebrating, setIsCardCelebrating] = useState(false);
 
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const newSubtaskRef = useRef<HTMLInputElement>(null);
@@ -68,17 +87,48 @@ export default function FocusZone() {
     if (focusTask) {
       updateTask(focusTask.id, { status: 'done', progress: 100 });
       toast.success('Mission completed! 🎉');
+      setIsCardCelebrating(true);
+      setTimeout(() => setIsCardCelebrating(false), 1450);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
+      }
     }
   };
 
   const handleOpenDetails = () => {
     if (focusTask) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:ui-open'));
+      }
       setEditingTaskId(focusTask.id);
+      setDetailMode(true);
       setModalOpen(true);
     }
   };
 
+  const handleSwipeTask = (direction: 1 | -1) => {
+    if (activeFocusTasks.length <= 1) return;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:task-swipe'));
+    }
+    setSwipeDirection(direction);
+    setFocusIndex((prev) => {
+      const next = prev + direction;
+      if (next < 0) return activeFocusTasks.length - 1;
+      if (next >= activeFocusTasks.length) return 0;
+      return next;
+    });
+  };
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (Math.abs(info.offset.x) < 75 && Math.abs(info.velocity.x) < 450) return;
+    handleSwipeTask(info.offset.x > 0 ? -1 : 1);
+  };
+
   const handleSelectTask = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:ui-close'));
+    }
     setCurrentView('kanban');
   };
 
@@ -226,6 +276,22 @@ export default function FocusZone() {
   }, [focusTask]);
 
   const isDark = theme === 'dark';
+  const focusSwipeX = useMotionValue(0);
+  const focusSwipeRotate = useTransform(focusSwipeX, [-260, 0, 260], [-10, 0, 10]);
+  const swipeLeftOpacity = useTransform(focusSwipeX, [-220, -70, 0], [0.8, 0.45, 0]);
+  const swipeRightOpacity = useTransform(focusSwipeX, [0, 70, 220], [0, 0.45, 0.8]);
+  const swipeProgress = useTransform(focusSwipeX, [-220, 0, 220], [1, 0, 1]);
+
+  const previousTask = activeFocusTasks[(focusIndex - 1 + activeFocusTasks.length) % activeFocusTasks.length];
+  const nextTask = activeFocusTasks[(focusIndex + 1) % activeFocusTasks.length];
+  const fannedTasks = useMemo(() => {
+    if (activeFocusTasks.length === 0) return [];
+    const base = [focusIndex - 1, focusIndex, focusIndex + 1];
+    return base.map((index) => {
+      const normalizedIndex = (index + activeFocusTasks.length) % activeFocusTasks.length;
+      return activeFocusTasks[normalizedIndex];
+    });
+  }, [activeFocusTasks, focusIndex]);
 
   const getGlowStyle = () => {
     if (progress === 0) return {};
@@ -290,15 +356,168 @@ export default function FocusZone() {
 
   return (
     <div
+      onTouchStart={(e) => {
+        touchStartXRef.current = e.changedTouches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartXRef.current === null) return;
+        const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
+        const delta = endX - touchStartXRef.current;
+        if (Math.abs(delta) > 40) {
+          handleSwipeTask(delta > 0 ? -1 : 1);
+        }
+        touchStartXRef.current = null;
+      }}
       className={cn(
         "border-[3px] border-black rounded-lg p-4 md:p-8 mb-6 md:mb-8 relative transition-all duration-500 grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] gap-6 md:gap-8",
-        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]"
+        progress === 0 && "shadow-[4px_4px_0_black] md:shadow-[6px_6px_0_black]",
+        isCardCelebrating && "card-gyrate"
       )}
       style={{
         backgroundColor: mainColor,
         ...getGlowStyle(),
       }}
     >
+      <div className="absolute top-2 right-2 z-30 flex items-center gap-1 rounded-full border border-black/25 bg-black/20 p-1 backdrop-blur-sm">
+        <button
+          onClick={() => setFocusLayout('single')}
+          className={cn(
+            "px-2 py-1 text-[9px] rounded-full border",
+            focusLayout === 'single' ? "bg-[var(--brand-yellow)] text-black border-black" : "bg-transparent text-white border-white/35"
+          )}
+        >
+          Single
+        </button>
+        <button
+          onClick={() => setFocusLayout('multi')}
+          className={cn(
+            "px-2 py-1 text-[9px] rounded-full border",
+            focusLayout === 'multi' ? "bg-[var(--brand-yellow)] text-black border-black" : "bg-transparent text-white border-white/35"
+          )}
+        >
+          Multi
+        </button>
+      </div>
+
+      {activeFocusTasks.length > 1 && (
+        <>
+          <motion.div
+            style={{ opacity: swipeLeftOpacity }}
+            className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-32 rounded-l-lg bg-gradient-to-r from-black/40 to-transparent z-10 flex items-center justify-center"
+          >
+            <span className="text-white text-[9px] md:text-xs uppercase tracking-[2px] font-bold">Next ⟶</span>
+          </motion.div>
+          <motion.div
+            style={{ opacity: swipeRightOpacity }}
+            className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-32 rounded-r-lg bg-gradient-to-l from-black/40 to-transparent z-10 flex items-center justify-center"
+          >
+            <span className="text-white text-[9px] md:text-xs uppercase tracking-[2px] font-bold">⟵ Previous</span>
+          </motion.div>
+          <div className="pointer-events-none absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 hidden md:block w-24 rounded-lg border-2 border-black/30 bg-white/20 p-2 backdrop-blur-md z-[1]">
+            <div className="text-[8px] uppercase tracking-[1.5px] text-white/80">Prev Task</div>
+            <div className="text-[10px] font-bold text-white truncate">{previousTask?.title || '—'}</div>
+          </div>
+          <div className="pointer-events-none absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 hidden md:block w-24 rounded-lg border-2 border-black/30 bg-white/20 p-2 backdrop-blur-md z-[1]">
+            <div className="text-[8px] uppercase tracking-[1.5px] text-white/80">Next Task</div>
+            <div className="text-[10px] font-bold text-white truncate">{nextTask?.title || '—'}</div>
+          </div>
+          <motion.div
+            style={{ opacity: swipeProgress }}
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-2 text-[9px] uppercase tracking-[2px] rounded-full border border-black/30 px-2 py-0.5 bg-black/20 text-white backdrop-blur-md z-20"
+          >
+            Swipe to cycle missions
+          </motion.div>
+        </>
+      )}
+
+      {activeFocusTasks.length > 1 && (
+        <>
+          <button
+            onClick={() => handleSwipeTask(-1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/40 text-white p-1.5 rounded-full border border-white/20"
+            title="Previous active task"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleSwipeTask(1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/25 hover:bg-black/40 text-white p-1.5 rounded-full border border-white/20"
+            title="Next active task"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
+
+      {focusLayout === 'multi' ? (
+        <div className="relative min-h-[420px] flex items-center justify-center">
+          {fannedTasks.map((task, idx) => {
+            if (!task) return null;
+            const offset = idx - 1;
+            const isCenter = offset === 0;
+            return (
+              <motion.button
+                key={task.id}
+                onClick={() => setFocusIndex(activeFocusTasks.findIndex((candidate) => candidate.id === task.id))}
+                whileHover={{ y: -8, scale: isCenter ? 1.03 : 1.02 }}
+                className={cn(
+                  "absolute w-[250px] md:w-[320px] rounded-xl border-[3px] border-black text-left p-4 shadow-[4px_4px_0_black] transition-all",
+                  isCenter ? "z-20 bg-white/95" : "z-10 bg-white/80"
+                )}
+                style={{
+                  transform: `translateX(${offset * 180}px) rotate(${offset * 10}deg)`,
+                  opacity: isCenter ? 1 : 0.75,
+                }}
+              >
+                <div className="text-[9px] uppercase tracking-[1.6px] text-black/60 mb-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                  {isCenter ? 'Current Focus' : 'Deck'}
+                </div>
+                <div className="text-lg font-bold leading-tight mb-2">{task.title}</div>
+                <div className="text-[11px] text-black/60 flex items-center justify-between">
+                  <span>{task.project}</span>
+                  <span>{Math.round(task.progress || 0)}%</span>
+                </div>
+                {(task.dependencyTaskIds || []).length > 0 && (
+                  <div className="mt-2 text-[10px] text-black/70" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                    ★ {(task.dependencyTaskIds || []).length} linked task{(task.dependencyTaskIds || []).length === 1 ? '' : 's'}
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+      ) : (
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={focusTask.id}
+          initial={{
+            x: swipeDirection > 0 ? 130 : -130,
+            opacity: 0.45,
+            scale: 0.9,
+            rotate: swipeDirection > 0 ? 5 : -5,
+          }}
+          animate={{
+            x: 0,
+            opacity: 1,
+            scale: [1.03, 1],
+            rotate: [swipeDirection > 0 ? -1.5 : 1.5, 0],
+          }}
+          exit={{
+            x: swipeDirection > 0 ? -220 : 220,
+            opacity: 0,
+            scale: [1, 1.06, 0.9],
+            rotate: swipeDirection > 0 ? -7 : 7,
+          }}
+          transition={{ duration: 0.36, times: [0, 1], ease: [0.25, 1, 0.3, 1] }}
+          drag={activeFocusTasks.length > 1 ? 'x' : false}
+          dragElastic={0.18}
+          dragMomentum
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+          style={{ x: focusSwipeX, rotate: focusSwipeRotate }}
+          whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
+          className="contents"
+        >
       {/* LEFT: Notes */}
       <div className="lg:border-r-[2px] lg:border-dashed lg:border-black/20 lg:pr-5 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
@@ -454,7 +673,15 @@ export default function FocusZone() {
               >
                 {/* Glass-style Checkbox */}
                 <div
-                  onClick={() => toggleSubtask(focusTask.id, subtask.id)}
+                  onClick={() => {
+                    const wasDone = subtask.done;
+                    toggleSubtask(focusTask.id, subtask.id);
+                    if (wasDone) {
+                      playAppSound('subtaskToggle', soundEnabled);
+                    } else if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new Event('starrlign:subtask-complete'));
+                    }
+                  }}
                   className={cn(
                     "w-5 h-5 border-[2px] rounded-md flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200 transform hover:scale-110",
                     subtask.done 
@@ -541,7 +768,9 @@ export default function FocusZone() {
           </button>
         </div>
       </div>
+        </motion.div>
+      </AnimatePresence>
+      )}
     </div>
   );
 }
-
