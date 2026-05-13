@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore, createNewProject } from '@/lib/store';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const viewTitles: Record<string, string> = {
@@ -59,6 +59,10 @@ export default function Topbar() {
       >
         {title}
       </h1>
+
+      <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2px] border-black bg-[var(--brand-yellow)] text-black text-[9px] font-bold tracking-[1.5px] shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title="If you can see this, the latest feature drop is deployed.">
+        <Sparkles className="w-3 h-3" /> V12 LIVE
+      </div>
 
       {/* Search Bar - Opens SearchModal on click */}
       <button

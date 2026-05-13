@@ -151,6 +151,17 @@ export default function CalendarView() {
         </div>
       </div>
 
+      <div className="border-[2px] border-black rounded-lg bg-white p-3 shadow-[3px_3px_0_black]">
+        <div className="text-[10px] uppercase tracking-[2px] text-black/60 mb-2" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>Project color legend</div>
+        <div className="flex flex-wrap gap-2">
+          {projects.map((project) => (
+            <span key={project.id} className={cn("text-[10px] px-2 py-1 rounded border border-black font-bold", projectTextColor[getProjectColorKey(project.name)] || 'text-black')} style={{ backgroundColor: projectColorHex[getProjectColorKey(project.name)] || projectColorHex.yellow, fontFamily: 'var(--font-space-mono), monospace' }}>
+              {project.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-7 gap-2 text-xs font-bold text-black/70">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
           <div key={d} className="px-2">{d}</div>
