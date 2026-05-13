@@ -276,11 +276,11 @@ export default function FocusZone() {
   }, [focusTask]);
 
   const isDark = theme === 'dark';
-  const swipeX = useMotionValue(0);
-  const swipeRotate = useTransform(swipeX, [-260, 0, 260], [-10, 0, 10]);
-  const swipeLeftOpacity = useTransform(swipeX, [-220, -70, 0], [0.8, 0.45, 0]);
-  const swipeRightOpacity = useTransform(swipeX, [0, 70, 220], [0, 0.45, 0.8]);
-  const swipeProgress = useTransform(swipeX, [-220, 0, 220], [1, 0, 1]);
+  const focusSwipeX = useMotionValue(0);
+  const focusSwipeRotate = useTransform(focusSwipeX, [-260, 0, 260], [-10, 0, 10]);
+  const swipeLeftOpacity = useTransform(focusSwipeX, [-220, -70, 0], [0.8, 0.45, 0]);
+  const swipeRightOpacity = useTransform(focusSwipeX, [0, 70, 220], [0, 0.45, 0.8]);
+  const swipeProgress = useTransform(focusSwipeX, [-220, 0, 220], [1, 0, 1]);
 
   const previousTask = activeFocusTasks[(focusIndex - 1 + activeFocusTasks.length) % activeFocusTasks.length];
   const nextTask = activeFocusTasks[(focusIndex + 1) % activeFocusTasks.length];
@@ -516,7 +516,7 @@ export default function FocusZone() {
           dragMomentum
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={handleDragEnd}
-          style={{ x: swipeX, rotate: swipeRotate }}
+          style={{ x: focusSwipeX, rotate: focusSwipeRotate }}
           whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
           className="contents"
         >
