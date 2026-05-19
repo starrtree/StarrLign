@@ -106,6 +106,12 @@ export default function FocusZone() {
     }
   };
 
+  const handleRemoveFromFocus = () => {
+    if (!focusTask) return;
+    updateTask(focusTask.id, { status: 'todo' });
+    toast.success('Removed from focus deck');
+  };
+
   const handleSwipeTask = (direction: 1 | -1) => {
     if (activeFocusTasks.length <= 1) return;
     if (typeof window !== 'undefined') {
@@ -359,10 +365,17 @@ export default function FocusZone() {
   return (
     <div
       onTouchStart={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, input, textarea, select, a, [role=button], [data-no-swipe="1"]')) {
+          touchStartXRef.current = null;
+          return;
+        }
         touchStartXRef.current = e.changedTouches[0]?.clientX ?? null;
       }}
       onTouchEnd={(e) => {
         if (touchStartXRef.current === null) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('button, input, textarea, select, a, [role=button], [data-no-swipe="1"]')) return;
         const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
         const delta = endX - touchStartXRef.current;
         if (Math.abs(delta) > 40) {
@@ -630,6 +643,13 @@ export default function FocusZone() {
             style={{ fontFamily: 'var(--font-space-mono), monospace' }}
           >
             <ExternalLink className="w-3 h-3" /> OPEN DETAILS
+          </button>
+          <button
+            onClick={handleRemoveFromFocus}
+            className="px-4 py-2 bg-black/75 text-white text-[10px] md:text-[11px] font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all flex items-center gap-1.5 shadow-[2px_2px_0_black] hover:shadow-[4px_4px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <Trash2 className="w-3 h-3" /> REMOVE FROM FOCUS
           </button>
         </div>
       </div>

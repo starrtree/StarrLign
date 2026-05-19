@@ -151,6 +151,14 @@ function TaskModalContent({
     () => tasks.filter((task) => !task.isArchived && task.id !== editingTask?.id),
     [tasks, editingTask?.id]
   );
+  const dependencyByProject = useMemo(() => {
+    const grouped: Record<string, Record<string, Task[]>> = {};
+    dependencyOptions.forEach((task) => {
+      if (!grouped[task.project]) grouped[task.project] = { todo: [], doing: [], review: [], done: [] };
+      grouped[task.project][task.status].push(task);
+    });
+    return grouped;
+  }, [dependencyOptions]);
 
   const handleSave = () => {
     if (!formData.title?.trim()) {
@@ -366,10 +374,11 @@ function TaskModalContent({
 
           {/* Multi-project linking */}
           <div className="mb-4">
-            <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-              Also linked to projects
-            </label>
-            <div className="grid grid-cols-2 gap-2">
+            <details className="rounded-lg border-[2px] border-[#3a3a3a] bg-[#222] p-2" open={false}>
+              <summary className="cursor-pointer text-[11px] text-white/80 uppercase tracking-wider" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                + Link to More Projects
+              </summary>
+              <div className="grid grid-cols-2 gap-2 mt-2">
               {projects.map((project) => (
                 <label key={project.id} className="flex items-center gap-2 text-xs text-white/80">
                   <input
@@ -388,32 +397,48 @@ function TaskModalContent({
                   <span>{project.name}</span>
                 </label>
               ))}
-            </div>
+              </div>
+            </details>
           </div>
 
           <div className="mb-4">
-            <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-              Depends on tasks
-            </label>
-            <div className="max-h-[120px] overflow-y-auto border-[2px] border-[#3a3a3a] rounded-lg p-2 bg-[#222] space-y-1.5">
+            <details className="rounded-lg border-[2px] border-[#3a3a3a] bg-[#222] p-2" open={false}>
+              <summary className="cursor-pointer text-[11px] text-white/80 uppercase tracking-wider" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                Depends on Tasks
+              </summary>
+              <div className="max-h-[220px] overflow-y-auto border border-[#3a3a3a] rounded-lg p-2 bg-[#222] space-y-1.5 mt-2">
               {dependencyOptions.length === 0 && <div className="text-xs text-white/40">No tasks available.</div>}
-              {dependencyOptions.map((task) => (
-                <label key={task.id} className="flex items-center gap-2 text-xs text-white/80">
-                  <input
-                    type="checkbox"
-                    checked={(formData.dependencyTaskIds || []).includes(task.id)}
-                    onChange={(e) => {
-                      const selected = new Set(formData.dependencyTaskIds || []);
-                      if (e.target.checked) selected.add(task.id);
-                      else selected.delete(task.id);
-                      setFormData({ ...formData, dependencyTaskIds: Array.from(selected) });
-                    }}
-                  />
-                  <span className="truncate">{task.title}</span>
-                  <span className="ml-auto text-[10px] text-white/45">{task.project}</span>
-                </label>
+              {Object.entries(dependencyByProject).map(([projectName, byStatus]) => (
+                <details key={projectName} className="border border-white/10 rounded p-1.5">
+                  <summary className="text-xs text-white/80 cursor-pointer">{projectName}</summary>
+                  <div className="pl-2 mt-1 space-y-1">
+                    {Object.entries(byStatus).map(([status, items]) => items.length > 0 && (
+                      <details key={status} className="border border-white/10 rounded p-1">
+                        <summary className="text-[11px] text-white/65 cursor-pointer capitalize">{status}</summary>
+                        <div className="pl-2 mt-1 space-y-1">
+                          {items.map((task) => (
+                            <label key={task.id} className="flex items-center gap-2 text-xs text-white/80">
+                              <input
+                                type="checkbox"
+                                checked={(formData.dependencyTaskIds || []).includes(task.id)}
+                                onChange={(e) => {
+                                  const selected = new Set(formData.dependencyTaskIds || []);
+                                  if (e.target.checked) selected.add(task.id);
+                                  else selected.delete(task.id);
+                                  setFormData({ ...formData, dependencyTaskIds: Array.from(selected) });
+                                }}
+                              />
+                              <span className="truncate">{task.title}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </details>
               ))}
-            </div>
+              </div>
+            </details>
           </div>
 
           {/* Duration Spinners */}
