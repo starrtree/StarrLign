@@ -74,11 +74,11 @@ export default function ArchiveView() {
               className="text-xl text-[var(--brand-yellow)] tracking-wide"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              SACRIFICE PIT
+              NEST
             </h2>
           </div>
           <div className="text-xs text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-            {archivedTasks.length + archivedProjects.length + archivedDocuments.length} items sacrificed
+            {archivedTasks.length + archivedProjects.length + archivedDocuments.length} items nested
           </div>
         </div>
         
@@ -121,10 +121,10 @@ export default function ArchiveView() {
               <div className="p-8 text-center">
                 <CheckCircle className="w-12 h-12 mx-auto mb-3 text-black/40" />
                 <p className="text-black/60 text-sm" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  No sacrificed tasks
+                  No nested tasks
                 </p>
                 <p className="text-xs text-black/40 mt-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  Tasks you sacrifice will appear here
+                  Tasks you nest will appear here
                 </p>
               </div>
             ) : (
@@ -168,10 +168,10 @@ export default function ArchiveView() {
               <div className="p-8 text-center">
                 <FolderOpen className="w-12 h-12 mx-auto mb-3 text-black/40" />
                 <p className="text-black/60 text-sm" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  No sacrificed projects
+                  No nested projects
                 </p>
                 <p className="text-xs text-black/40 mt-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  Projects you sacrifice will appear here
+                  Projects you nest will appear here
                 </p>
               </div>
             ) : (
@@ -216,10 +216,10 @@ export default function ArchiveView() {
               <div className="p-8 text-center">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-black/40" />
                 <p className="text-black/60 text-sm" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  No sacrificed documents
+                  No nested documents
                 </p>
                 <p className="text-xs text-black/40 mt-1" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                  Documents you sacrifice will appear here
+                  Documents you nest will appear here
                 </p>
               </div>
             ) : (

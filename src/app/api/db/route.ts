@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { turso, initializeDatabase, isDatabaseAvailable, getDatabaseMode } from '@/lib/turso';
-import { Task, Project, ProjectCategory, Document } from '@/lib/types';
+import { Task, Project, ProjectCategory, Document, Budget, MoneyEntry, InvestmentPosition } from '@/lib/types';
 
 let dbInitialized = false;
 
@@ -43,8 +43,12 @@ export async function GET() {
       id: String(row.id),
       title: String(row.title),
       project: row.project ? String(row.project) : '',
+      linkedProjects: parseJsonField<string[]>(row.linkedProjects, row.project ? [String(row.project)] : []),
+      dependencyTaskIds: parseJsonField<string[]>(row.dependencyTaskIds, []),
       priority: ((row.priority as Task['priority']) || 'medium'),
       status: ((row.status as Task['status']) || 'todo'),
+      startDate: row.startDate ? String(row.startDate) : '',
+      endDate: row.endDate ? String(row.endDate) : '',
       due: row.due ? String(row.due) : '',
       durationHours: Number(row.durationHours ?? 0),
       durationMinutes: Number(row.durationMinutes ?? 0),
@@ -63,6 +67,8 @@ export async function GET() {
       icon: row.icon ? String(row.icon) : 'folder',
       tasks: Number(row.tasks ?? 0),
       completed: Number(row.completed ?? 0),
+      startDate: row.startDate ? String(row.startDate) : '',
+      endDate: row.endDate ? String(row.endDate) : '',
       due: row.due ? String(row.due) : '',
       order: Number(row.order ?? 0),
       isArchived: Boolean(row.isArchived),
@@ -89,12 +95,20 @@ export async function GET() {
     }));
 
     const tagsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'tags'");
+    const budgetsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'budgets'");
+    const moneyEntriesResult = await turso.execute("SELECT value FROM app_state WHERE key = 'moneyEntries'");
+    const investmentPositionsResult = await turso.execute("SELECT value FROM app_state WHERE key = 'investmentPositions'");
+    const baseIncomeMonthlyResult = await turso.execute("SELECT value FROM app_state WHERE key = 'baseIncomeMonthly'");
     const tags = tagsResult.rows[0] ? parseJsonField<string[]>(tagsResult.rows[0].value, []) : [];
+    const budgets = budgetsResult.rows[0] ? parseJsonField<Budget[]>(budgetsResult.rows[0].value, []) : [];
+    const moneyEntries = moneyEntriesResult.rows[0] ? parseJsonField<MoneyEntry[]>(moneyEntriesResult.rows[0].value, []) : [];
+    const investmentPositions = investmentPositionsResult.rows[0] ? parseJsonField<InvestmentPosition[]>(investmentPositionsResult.rows[0].value, []) : [];
+    const baseIncomeMonthly = baseIncomeMonthlyResult.rows[0] ? Number(baseIncomeMonthlyResult.rows[0].value ?? 0) : 0;
 
     return NextResponse.json({
       success: true,
       databaseMode: getDatabaseMode(),
-      data: { tasks, projects, projectCategories, documents, tags },
+      data: { tasks, projects, projectCategories, documents, tags, budgets, moneyEntries, investmentPositions, baseIncomeMonthly },
     });
   } catch (error) {
     console.error('Error loading data:', error);
@@ -118,20 +132,24 @@ export async function POST(request: NextRequest) {
     await ensureDbInit();
 
     const body = await request.json();
-    const { tasks, projects, projectCategories, documents, tags } = body;
+    const { tasks, projects, projectCategories, documents, tags, budgets, moneyEntries, investmentPositions, baseIncomeMonthly } = body;
 
     const batchStatements: { sql: string; args: (string | number | null)[] }[] = [];
 
     batchStatements.push({ sql: 'DELETE FROM tasks', args: [] });
     for (const task of (tasks || []) as Task[]) {
       batchStatements.push({
-        sql: 'INSERT INTO tasks (id, title, project, priority, status, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         args: [
           task.id,
           task.title,
           task.project || null,
+          JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
+          JSON.stringify(task.dependencyTaskIds || []),
           task.priority,
           task.status,
+          task.startDate || null,
+          task.endDate || null,
           task.due || null,
           task.durationHours || 0,
           task.durationMinutes || 0,
@@ -147,7 +165,7 @@ export async function POST(request: NextRequest) {
     batchStatements.push({ sql: 'DELETE FROM projects', args: [] });
     for (const project of (projects || []) as Project[]) {
       batchStatements.push({
-        sql: 'INSERT INTO projects (id, name, color, icon, tasks, completed, due, "order", isArchived, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO projects (id, name, color, icon, tasks, completed, startDate, endDate, due, "order", isArchived, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         args: [
           project.id,
           project.name,
@@ -155,6 +173,8 @@ export async function POST(request: NextRequest) {
           project.icon || 'folder',
           project.tasks || 0,
           project.completed || 0,
+          project.startDate || null,
+          project.endDate || null,
           project.due || null,
           project.order || 0,
           project.isArchived ? 1 : 0,
@@ -191,6 +211,22 @@ export async function POST(request: NextRequest) {
     batchStatements.push({
       sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('tags', ?)",
       args: [JSON.stringify(tags || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('budgets', ?)",
+      args: [JSON.stringify(budgets || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('moneyEntries', ?)",
+      args: [JSON.stringify(moneyEntries || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('investmentPositions', ?)",
+      args: [JSON.stringify(investmentPositions || [])],
+    });
+    batchStatements.push({
+      sql: "INSERT OR REPLACE INTO app_state (key, value) VALUES ('baseIncomeMonthly', ?)",
+      args: [String(Number(baseIncomeMonthly || 0))],
     });
 
     await turso.batch(batchStatements);

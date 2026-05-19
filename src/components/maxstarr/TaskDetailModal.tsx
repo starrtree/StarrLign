@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useStore, formatDuration } from '@/lib/store';
+import { useStore, formatDuration, createNewTask } from '@/lib/store';
 import { Task } from '@/lib/types';
-import { X, Clock, Calendar, Tag, CheckCircle, Circle, Pencil, Trash2, Archive, Play } from 'lucide-react';
+import { X, Clock, Calendar, Tag, CheckCircle, Circle, Pencil, Trash2, Archive, Play, Copy, Pause, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { playAppSound } from '@/lib/sound';
 
 export default function TaskDetailModal() {
   const { 
@@ -14,12 +15,14 @@ export default function TaskDetailModal() {
     editingTaskId, 
     tasks, 
     projects,
+    addTask,
     updateTask,
     deleteTask,
     archiveTask,
     setEditingTaskId,
     setCurrentView,
-    setDetailMode
+    setDetailMode,
+    soundEnabled
   } = useStore();
   
   // Find the task being viewed
@@ -73,6 +76,9 @@ export default function TaskDetailModal() {
     if (task) {
       updateTask(task.id, { status: 'done', progress: 100 });
       toast.success('Task completed! 🎉');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
+      }
       handleClose();
     }
   };
@@ -89,17 +95,75 @@ export default function TaskDetailModal() {
     if (task) {
       archiveTask(task.id);
       handleClose();
-      toast.success('Task sacrificed');
+      toast.success('Task nested');
     }
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
     if (task) {
+      const currentSubtask = task.subtasks.find((st) => st.id === subtaskId);
       const updatedSubtasks = task.subtasks.map(st => 
         st.id === subtaskId ? { ...st, done: !st.done } : st
       );
       updateTask(task.id, { subtasks: updatedSubtasks });
+      if (currentSubtask?.done) {
+        playAppSound('subtaskToggle', soundEnabled);
+      } else if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:subtask-complete'));
+      }
     }
+  };
+
+  const handleDuplicateTask = () => {
+    if (!task) return;
+    const baseTitle = task.title.replace(/\s\(\d+\)$/, '');
+    const siblingTitles = tasks.map((t) => t.title);
+    let i = 1;
+    let nextTitle = `${baseTitle} (${i})`;
+    while (siblingTitles.includes(nextTitle)) {
+      i += 1;
+      nextTitle = `${baseTitle} (${i})`;
+    }
+    addTask(createNewTask({
+      ...task,
+      id: undefined,
+      title: nextTitle,
+      status: 'todo',
+      progress: 0,
+      subtasks: task.subtasks.map((subtask) => ({ ...subtask, id: Math.random().toString(36).slice(2, 9), done: false })),
+      timerStartedAt: null,
+      lastTimerStartAt: null,
+      lastTimerEndAt: null,
+      isArchived: false,
+    }));
+    toast.success('Task duplicated');
+  };
+
+  const handleTimerStart = () => {
+    if (!task || task.timerStartedAt) return;
+    const now = new Date().toISOString();
+    updateTask(task.id, { timerStartedAt: now, lastTimerStartAt: now });
+    toast.success('Timer started');
+  };
+
+  const handleTimerPause = () => {
+    if (!task?.timerStartedAt) return;
+    const started = new Date(task.timerStartedAt).getTime();
+    const endedAt = new Date();
+    const diffMin = Math.max(1, Math.round((endedAt.getTime() - started) / 60000));
+    const totalMinutes = (task.durationHours || 0) * 60 + (task.durationMinutes || 0) + diffMin;
+    updateTask(task.id, {
+      timerStartedAt: null,
+      lastTimerEndAt: endedAt.toISOString(),
+      durationHours: Math.floor(totalMinutes / 60),
+      durationMinutes: totalMinutes % 60,
+    });
+    toast.success(`Timer paused (+${diffMin}m)`);
+  };
+
+  const handleTimerStop = () => {
+    handleTimerPause();
+    toast.success('Timer ended');
   };
 
   const handleEdit = () => {
@@ -110,6 +174,7 @@ export default function TaskDetailModal() {
   if (!isModalOpen || !task) return null;
 
   const duration = formatDuration(task.durationHours, task.durationMinutes);
+  const timerRunning = Boolean(task.timerStartedAt);
   const progress = task.subtasks && task.subtasks.length > 0
     ? Math.round((task.subtasks.filter(s => s.done).length / task.subtasks.length) * 100)
     : task.progress || 0;
@@ -308,6 +373,39 @@ export default function TaskDetailModal() {
             >
               <Pencil className="w-3 h-3" /> EDIT
             </button>
+            <button
+              onClick={handleDuplicateTask}
+              className="px-3 py-2 bg-white/80 text-black text-xs font-bold border-[2px] border-black rounded-lg cursor-pointer transition-all flex items-center gap-1"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              <Copy className="w-3 h-3" /> DUPLICATE
+            </button>
+            {!timerRunning ? (
+              <button
+                onClick={handleTimerStart}
+                className="px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+              >
+                <Play className="w-3 h-3" /> TIMER START
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleTimerPause}
+                  className="px-3 py-2 bg-[var(--brand-yellow)] text-black text-xs font-bold border-[2px] border-black rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                >
+                  <Pause className="w-3 h-3" /> PAUSE
+                </button>
+                <button
+                  onClick={handleTimerStop}
+                  className="px-3 py-2 bg-[var(--brand-red)] text-white text-xs font-bold border-[2px] border-black rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                  style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                >
+                  <Square className="w-3 h-3" /> END
+                </button>
+              </>
+            )}
             {task.status !== 'done' && (
               task.status === 'doing' ? (
                 <button
@@ -333,4 +431,3 @@ export default function TaskDetailModal() {
     </div>
   );
 }
-

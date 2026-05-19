@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore, createNewProject } from '@/lib/store';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Sparkles } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const viewTitles: Record<string, string> = {
@@ -9,7 +9,9 @@ const viewTitles: Record<string, string> = {
   kanban: 'ALL TASKS',
   documents: 'DOCUMENTS',
   projects: 'PROJECTS',
-  archive: 'SACRIFICE PIT',
+  money: 'MONEY LAB',
+  calendar: 'CALENDAR',
+  archive: 'NEST',
 };
 
 export default function Topbar() {
@@ -52,11 +54,15 @@ export default function Topbar() {
       
       {/* Title */}
       <h1
-        className="text-lg md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 truncate"
+        className="text-base md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 overflow-x-auto whitespace-nowrap no-scrollbar"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
       </h1>
+
+      <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2px] border-black bg-[var(--brand-yellow)] text-black text-[9px] font-bold tracking-[1.5px] shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title="If you can see this, the latest feature drop is deployed.">
+        <Sparkles className="w-3 h-3" /> V12 LIVE
+      </div>
 
       {/* Search Bar - Opens SearchModal on click */}
       <button
@@ -76,10 +82,12 @@ export default function Topbar() {
       {showNewTaskButton && (
         <button
           onClick={handleNewProject}
-          className="px-3 md:px-4 py-2 bg-[var(--brand-yellow)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap"
+          className="inline-flex items-center justify-center md:justify-start px-2.5 md:px-4 py-2 bg-[var(--brand-yellow)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap"
           style={{ fontFamily: 'var(--font-space-mono), monospace', color: isDark ? '#000000' : '#ffffff' }}
+          title="Create new project"
         >
-          + NEW PROJECT
+          <span className="hidden md:inline">+ NEW PROJECT</span>
+          <Plus className="w-4 h-4 md:hidden" />
         </button>
       )}
 
@@ -90,10 +98,10 @@ export default function Topbar() {
           className="px-3 md:px-4 py-2 bg-[var(--brand-red)] text-white text-[10px] md:text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px] whitespace-nowrap btn-shine"
           style={{ fontFamily: 'var(--font-space-mono), monospace', color: isDark ? '#000000' : '#ffffff' }}
         >
-          + NEW TASK
+          <span className="hidden sm:inline">+ NEW TASK</span>
+          <span className="sm:hidden">+ TASK</span>
         </button>
       )}
     </header>
   );
 }
-

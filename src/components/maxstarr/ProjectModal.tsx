@@ -26,7 +26,7 @@ const EMOJIS = [
 
 interface ProjectModalContentProps {
   editingProjectId: string | null;
-  editingProject: { id: string; name: string; color: string; icon: string; due: string; category: string | null } | null;
+  editingProject: { id: string; name: string; color: string; icon: string; due: string; startDate: string; endDate: string; category: string | null } | null;
   onClose: () => void;
 }
 
@@ -38,6 +38,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const [color, setColor] = useState(editingProject?.color || 'blue');
   const [icon, setIcon] = useState(editingProject?.icon || '📁');
   const [due, setDue] = useState(editingProject?.due || '');
+  const [startDate, setStartDate] = useState(editingProject?.startDate || '');
+  const [showStartDate, setShowStartDate] = useState(Boolean(editingProject?.startDate));
   const [category, setCategory] = useState<string | null>(editingProject?.category || null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -59,6 +61,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         name: name.trim(), 
         color, 
         icon,
+        startDate,
+        endDate: due,
         due,
         category
       });
@@ -68,6 +72,8 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
         name: name.trim(),
         color,
         icon,
+        startDate,
+        endDate: due,
         due,
         category,
         order: projects.length,
@@ -103,7 +109,9 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const handleDelete = () => {
     if (!editingProjectId || !editingProject) return;
     
-    const projectTasks = tasks.filter(t => t.project === editingProject.name);
+    const projectTasks = tasks.filter(
+      (t) => t.project === editingProject.name || (t.linkedProjects || []).includes(editingProject.name)
+    );
     if (projectTasks.length > 0) {
       toast.error(`Cannot delete: ${projectTasks.length} tasks are assigned to this project`);
       return;
@@ -117,13 +125,13 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
   const handleSacrifice = () => {
     if (!editingProjectId) return;
     archiveProject(editingProjectId);
-    toast.success('Project sacrificed');
+    toast.success('Project nested');
     onClose();
   };
 
   return (
     <div 
-      className="bg-white border-[3px] border-black rounded-lg shadow-[8px_8px_0_black] w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-200"
+      className="bg-white border-[3px] border-black rounded-lg shadow-[8px_8px_0_black] w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       onClick={e => e.stopPropagation()}
     >
       {/* Header */}
@@ -247,6 +255,47 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
             </button>
           </div>
         </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[var(--gray-500)] tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            Optional Start Date
+          </span>
+          {!showStartDate ? (
+            <button
+              type="button"
+              onClick={() => setShowStartDate(true)}
+              className="text-[10px] px-2 py-1 border border-black rounded"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              + ADD START DATE
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowStartDate(false);
+                setStartDate('');
+              }}
+              className="text-[10px] px-2 py-1 border border-black rounded"
+              style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+            >
+              REMOVE
+            </button>
+          )}
+        </div>
+        {showStartDate && (
+          <div>
+            <label className="block text-[10px] text-[var(--gray-500)] mb-1 tracking-wider uppercase" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2.5 border-[2px] border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)] transition-all"
+            />
+          </div>
+        )}
 
         {/* Color Picker */}
         <div>
@@ -456,7 +505,7 @@ function ProjectModalContent({ editingProjectId, editingProject, onClose }: Proj
                 className="flex items-center gap-1.5 px-3 py-2 bg-[var(--gray-600)] text-white border-[2px] border-black rounded-lg hover:bg-[var(--gray-800)] transition-all text-xs font-bold cursor-pointer btn-shine"
                 style={{ fontFamily: 'var(--font-space-mono), monospace' }}
               >
-                <Archive className="w-3.5 h-3.5" /> SACRIFICE
+                <Archive className="w-3.5 h-3.5" /> NEST
               </button>
               <button
                 onClick={handleDelete}
@@ -523,6 +572,8 @@ export default function ProjectModal() {
           name: editingProject.name,
           color: editingProject.color,
           icon: editingProject.icon,
+          startDate: editingProject.startDate || '',
+          endDate: editingProject.endDate || '',
           due: editingProject.due,
           category: editingProject.category
         } : null}
@@ -531,4 +582,3 @@ export default function ProjectModal() {
     </div>
   );
 }
-
