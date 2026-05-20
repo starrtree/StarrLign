@@ -25,12 +25,25 @@ const SOUND_FILES: Record<AppSound, string> = {
   achievement: '/sounds/achievement-shine.mp3',
 };
 
+const SOUND_FALLBACKS: Partial<Record<AppSound, string[]>> = {
+  cardComplete: ['/sounds/caching.mp3', '/sounds/chaching.mp3', '/sounds/cash-chaching.mp3'],
+  taskComplete: ['/sounds/task complete.mp3', '/sounds/task-complete.wav'],
+  uiOpen: ['/sounds/open.mp3'],
+  uiClose: ['/sounds/close.mp3'],
+};
+
 export function playAppSound(sound: AppSound, enabled: boolean) {
   if (!enabled || typeof window === 'undefined') return;
   const src = SOUND_FILES[sound];
   if (!src) return;
+  const candidates = [src, ...(SOUND_FALLBACKS[sound] || [])];
 
-  const audio = new Audio(src);
+  const audio = new Audio();
+  audio.src = candidates[0];
+  audio.onerror = () => {
+    const next = candidates.find((candidate) => candidate !== audio.src);
+    if (next) audio.src = next;
+  };
   audio.volume =
     sound === 'projectComplete'
       ? 0.78

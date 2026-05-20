@@ -27,6 +27,7 @@ export default function SettingsModal() {
   const [isResetConfirming, setIsResetConfirming] = useState(false);
   const [resetConfirmationText, setResetConfirmationText] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
 
   // Apply theme class to document
   useEffect(() => {
@@ -90,12 +91,14 @@ export default function SettingsModal() {
 
   const handleStartReset = () => {
     setIsResetConfirming(true);
+    setResetStep(1);
     setResetConfirmationText('');
   };
 
   const handleCancelReset = () => {
     if (isResetting) return;
     setIsResetConfirming(false);
+    setResetStep(1);
     setResetConfirmationText('');
   };
 
@@ -106,6 +109,7 @@ export default function SettingsModal() {
     try {
       await resetAllData();
       setIsResetConfirming(false);
+      setResetStep(1);
       setResetConfirmationText('');
       toast.success('All data reset to the default starter workspace');
     } catch (error) {
@@ -114,6 +118,10 @@ export default function SettingsModal() {
     } finally {
       setIsResetting(false);
     }
+  };
+
+  const handleAdvanceResetStep = () => {
+    setResetStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
   };
 
   const stats = {
@@ -390,15 +398,37 @@ export default function SettingsModal() {
                 ) : (
                   <div className="space-y-3 rounded-lg border-[2px] border-black bg-white p-3 dark:bg-[var(--brand-blue-dark)]/60 dark:border-black">
                     <p className="text-xs text-[var(--gray-700)] dark:text-white/80" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                      Type <span className="font-bold text-[var(--brand-red)]">RESET</span> and then confirm to restore the default starter workspace.
+                      3-step protection: acknowledge warning, then type <span className="font-bold text-[var(--brand-red)]">RESET</span>, then final confirm.
                     </p>
-                    <input
-                      value={resetConfirmationText}
-                      onChange={(e) => setResetConfirmationText(e.target.value)}
-                      placeholder="Type RESET"
-                      className="w-full px-3 py-2 border-[2px] border-[var(--brand-red)] rounded-lg text-xs bg-white dark:bg-[var(--brand-blue-dark)] text-[var(--gray-800)] dark:text-white"
-                      style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-                    />
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--brand-red)]">Step {resetStep} of 3</div>
+                    {resetStep === 1 && (
+                      <button
+                        onClick={handleAdvanceResetStep}
+                        className="px-3 py-2 bg-[var(--brand-yellow)] border-[2px] border-black text-black rounded-lg text-xs font-bold"
+                        style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                      >
+                        I Understand This Deletes Everything
+                      </button>
+                    )}
+                    {resetStep >= 2 && (
+                      <input
+                        value={resetConfirmationText}
+                        onChange={(e) => setResetConfirmationText(e.target.value)}
+                        placeholder="Type RESET"
+                        className="w-full px-3 py-2 border-[2px] border-[var(--brand-red)] rounded-lg text-xs bg-white dark:bg-[var(--brand-blue-dark)] text-[var(--gray-800)] dark:text-white"
+                        style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                      />
+                    )}
+                    {resetStep === 2 && (
+                      <button
+                        onClick={handleAdvanceResetStep}
+                        disabled={resetConfirmationText !== 'RESET'}
+                        className="px-3 py-2 bg-[var(--brand-blue)] border-[2px] border-black text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                        style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+                      >
+                        Continue to Final Confirmation
+                      </button>
+                    )}
                     <div className="flex gap-2">
                       <button
                         onClick={handleCancelReset}
@@ -410,7 +440,7 @@ export default function SettingsModal() {
                       </button>
                       <button
                         onClick={handleResetAllData}
-                        disabled={resetConfirmationText !== 'RESET' || isResetting}
+                        disabled={resetStep < 3 || resetConfirmationText !== 'RESET' || isResetting}
                         className="px-3 py-2 bg-[var(--brand-red)] border-[2px] border-black text-white rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ fontFamily: 'var(--font-space-mono), monospace' }}
                       >
@@ -489,5 +519,3 @@ export default function SettingsModal() {
     </div>
   );
 }
-
-

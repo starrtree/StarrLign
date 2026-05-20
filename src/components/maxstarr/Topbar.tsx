@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore, createNewProject } from '@/lib/store';
-import { Search, Plus, Sparkles } from 'lucide-react';
+import { Search, Plus, Sparkles, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const viewTitles: Record<string, string> = {
@@ -17,7 +17,7 @@ const viewTitles: Record<string, string> = {
 export default function Topbar() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { currentView, setModalOpen, setEditingTaskId, selectedProjectId, projects, selectedDocumentId, documents, setProjectModalOpen, setEditingProjectId, setSearchOpen } = useStore();
+  const { currentView, setModalOpen, setEditingTaskId, selectedProjectId, projects, selectedDocumentId, documents, setProjectModalOpen, setEditingProjectId, setSearchOpen, setTheme } = useStore();
 
   const handleNewTask = () => {
     setEditingTaskId(null);
@@ -61,8 +61,17 @@ export default function Topbar() {
       </h1>
 
       <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2px] border-black bg-[var(--brand-yellow)] text-black text-[9px] font-bold tracking-[1.5px] shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title="If you can see this, the latest feature drop is deployed.">
-        <Sparkles className="w-3 h-3" /> V12 LIVE
+        <Sparkles className="w-3 h-3" /> V14 LIVE
       </div>
+      <button
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2px] border-black bg-white/90 text-black text-[10px] font-bold tracking-[1.2px] shadow-[2px_2px_0_black]"
+        style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        title="Toggle light/dark mode"
+      >
+        {theme === 'dark' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+        {theme === 'dark' ? 'LIGHT' : 'DARK'}
+      </button>
 
       {/* Search Bar - Opens SearchModal on click */}
       <button

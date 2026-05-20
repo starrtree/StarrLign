@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, formatDuration, formatRelativeTime, calculateWordCount } from '@/lib/store';
 import { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, List, ArrowLeft, Calendar, Clock, CheckCircle, AlertCircle, Pencil, FileText, Plus, Filter, Archive, FolderOpen, X, Trash2 } from 'lucide-react';
+import { LayoutGrid, List, ArrowLeft, Calendar, Clock, CheckCircle, AlertCircle, Pencil, FileText, Plus, Filter, Archive, FolderOpen, X, Trash2, Maximize2 } from 'lucide-react';
 import TaskCard from './TaskCard';
 import { toast } from 'sonner';
 
@@ -43,6 +43,7 @@ export default function ProjectView() {
   const modularGridRef = useRef<HTMLDivElement | null>(null);
   const [dependencyLines, setDependencyLines] = useState<Array<{ fromX: number; fromY: number; toX: number; toY: number; id: string }>>([]);
   const [pendingDependencySourceTaskId, setPendingDependencySourceTaskId] = useState<string | null>(null);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const onProjectComplete = (event: Event) => {
@@ -638,6 +639,16 @@ export default function ProjectView() {
           >
             EDIT
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpandedTaskId(task.id);
+            }}
+            className="text-[9px] px-2 py-1 bg-[var(--brand-yellow)] text-black rounded border-[1.5px] border-black flex items-center gap-1"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <Maximize2 className="w-3 h-3" /> EXPAND
+          </button>
           {task.status !== 'doing' && (
             <button
               onClick={(e) => {
@@ -868,6 +879,76 @@ export default function ProjectView() {
           </div>
         </div>
       )}
+      {expandedTaskId && (
+        <div className="fixed inset-0 z-[240] bg-black/75 p-3 md:p-8" onClick={() => setExpandedTaskId(null)}>
+          <div
+            className="w-full h-full max-w-5xl mx-auto border-[3px] border-black rounded-2xl p-6 md:p-10 overflow-y-auto"
+            style={{ backgroundColor: projectColor }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const t = tasks.find((row) => row.id === expandedTaskId);
+              if (!t) return null;
+              return (
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-xs uppercase tracking-[2px] text-black/70" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>Temporary Focus Expand</div>
+                    <button onClick={() => setExpandedTaskId(null)} className="px-3 py-1.5 border-2 border-black rounded bg-white/70 text-black text-xs font-bold">Close</button>
+                  </div>
+                  <h3 className="text-3xl md:text-5xl mb-3" style={{ fontFamily: 'var(--font-display)' }}>{t.title}</h3>
+                  <div className="text-sm mb-5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>{t.project} • {t.priority.toUpperCase()} • {formatDuration(t.durationHours, t.durationMinutes)}</div>
+                  <div className="text-base whitespace-pre-wrap leading-relaxed flex-1 rounded-xl border-2 border-black/30 bg-white/35 p-4">{t.notes || 'No notes yet.'}</div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {completedProjectTasks.length > 0 && (
+        <div className="mt-4 border-[2px] border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+          <button
+            onClick={() => setShowCompleted((prev) => !prev)}
+            className="w-full px-4 py-2 bg-[var(--brand-green)]/30 text-left text-xs font-bold tracking-wider flex items-center justify-between"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
+            <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
+          </button>
+          {showCompleted && (
+            <div
+              className="divide-y divide-black/20 bg-[var(--brand-green)]/10 dark:bg-[#0f2d16]"
+              style={{ ['--completed-text' as string]: '#14532d', ['--completed-text-muted' as string]: '#166534' }}
+            >
+              {completedProjectTasks.map((task) => (
+                <TaskListItem key={task.id} task={task} muted />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-6 border-[2px] border-black rounded-lg p-4 shadow-[3px_3px_0_black] bg-white">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[2px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+              Project Documents
+            </div>
+            <div className="text-sm font-semibold">Always available</div>
+          </div>
+          <button
+            onClick={() => {
+              if (!selectedProject) return;
+              createDocument(selectedProject.id);
+              setCurrentView('documents');
+            }}
+            className="px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg hover:bg-[var(--brand-blue-dark)] transition-all cursor-pointer shadow-[2px_2px_0_black]"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> + ADD DOCUMENT
+          </button>
+        </div>
+      </div>
 
       {completedProjectTasks.length > 0 && (
         <div className="mt-4 border-[2px] border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
