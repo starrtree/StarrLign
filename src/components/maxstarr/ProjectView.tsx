@@ -577,7 +577,7 @@ export default function ProjectView() {
           <div className={cn(
             "font-medium text-sm truncate",
             textColor,
-            task.status === 'done' && "line-through opacity-40"
+            task.status === 'done' && (muted ? "line-through opacity-90" : "line-through opacity-40")
           )}>
             {task.title}
           </div>
@@ -928,76 +928,10 @@ export default function ProjectView() {
         </div>
       )}
 
-      <div className="mt-6 border-[2px] border-black rounded-lg p-4 shadow-[3px_3px_0_black] bg-white">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-[2px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-              Project Documents
-            </div>
-            <div className="text-sm font-semibold">Always available</div>
-          </div>
-          <button
-            onClick={() => {
-              if (!selectedProject) return;
-              createDocument(selectedProject.id);
-              setCurrentView('documents');
-            }}
-            className="px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg hover:bg-[var(--brand-blue-dark)] transition-all cursor-pointer shadow-[2px_2px_0_black]"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
-            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> + ADD DOCUMENT
-          </button>
-        </div>
-      </div>
-
-      {completedProjectTasks.length > 0 && (
-        <div className="mt-4 border-[2px] border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
-          <button
-            onClick={() => setShowCompleted((prev) => !prev)}
-            className="w-full px-4 py-2 bg-[var(--brand-green)]/30 text-left text-xs font-bold tracking-wider flex items-center justify-between"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
-            <span>COMPLETED TASKS ({completedProjectTasks.length})</span>
-            <span>{showCompleted ? 'HIDE' : 'SHOW'}</span>
-          </button>
-          {showCompleted && (
-            <div
-              className="divide-y divide-black/20 bg-[var(--brand-green)]/10 dark:bg-[#0f2d16]"
-              style={{ ['--completed-text' as string]: '#b6f5c9', ['--completed-text-muted' as string]: '#8dd6a4' }}
-            >
-              {completedProjectTasks.map((task) => (
-                <TaskListItem key={task.id} task={task} muted />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="mt-6 border-[2px] border-black rounded-lg p-4 shadow-[3px_3px_0_black] bg-white">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-[2px] text-black/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-              Project Documents
-            </div>
-            <div className="text-sm font-semibold">Always available</div>
-          </div>
-          <button
-            onClick={() => {
-              if (!selectedProject) return;
-              createDocument(selectedProject.id);
-              setCurrentView('documents');
-            }}
-            className="px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg hover:bg-[var(--brand-blue-dark)] transition-all cursor-pointer shadow-[2px_2px_0_black]"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
-            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> + ADD DOCUMENT
-          </button>
-        </div>
-      </div>
-
       {/* Project Documents Section */}
-      {projectDocuments.length > 0 && (
-        <div className="mt-6">
+      <div className="mt-6">
+        {projectDocuments.length > 0 && (
+        <>
           <h3
             className={cn("text-lg tracking-wide mb-3", selectedProject.color === 'yellow' ? "text-black" : "text-white")}
             style={{ fontFamily: 'var(--font-display)' }}
@@ -1039,8 +973,26 @@ export default function ProjectView() {
               );
             })}
           </div>
-        </div>
+        </>
       )}
+
+        <div className="mt-4 border-[2px] border-black rounded-lg p-4 shadow-[3px_3px_0_black] bg-white">
+          <div className="text-[10px] uppercase tracking-[2px] text-black/60 mb-2" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            Project Documents
+          </div>
+          <button
+            onClick={() => {
+              if (!selectedProject) return;
+              createDocument(selectedProject.id);
+              setCurrentView('documents');
+            }}
+            className="w-full px-3 py-2 bg-[var(--brand-blue)] text-white text-xs font-bold border-[2px] border-black rounded-lg hover:bg-[var(--brand-blue-dark)] transition-all cursor-pointer shadow-[2px_2px_0_black]"
+            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+          >
+            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> CREATE DOCUMENT
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

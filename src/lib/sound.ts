@@ -42,7 +42,12 @@ export function playAppSound(sound: AppSound, enabled: boolean) {
   audio.src = candidates[0];
   audio.onerror = () => {
     const next = candidates.find((candidate) => candidate !== audio.src);
-    if (next) audio.src = next;
+    if (next) {
+      audio.src = next;
+      void audio.play().catch(() => {});
+      return;
+    }
+    playFallbackTone(sound);
   };
   audio.volume =
     sound === 'projectComplete'
@@ -63,8 +68,39 @@ export function playAppSound(sound: AppSound, enabled: boolean) {
                     ? 0.6
                     : 0.45;
   void audio.play().catch(() => {
-    // ignore autoplay/playback errors
+    playFallbackTone(sound);
   });
+}
+
+function playFallbackTone(sound: AppSound) {
+  if (typeof window === 'undefined') return;
+  const Ctx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return;
+  const ctx = new Ctx();
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  const frequencyMap: Record<AppSound, number> = {
+    taskComplete: 660,
+    subtaskToggle: 520,
+    subtaskComplete: 720,
+    projectComplete: 780,
+    cardComplete: 600,
+    taskSwipe: 420,
+    uiOpen: 500,
+    uiClose: 460,
+    moneyAdd: 840,
+    moneyDelete: 380,
+    achievement: 920,
+  };
+
+  oscillator.type = 'triangle';
+  oscillator.frequency.value = frequencyMap[sound];
+  gain.gain.value = sound === 'uiOpen' || sound === 'uiClose' ? 0.015 : 0.025;
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + 0.08);
 }
 
 export function vibrateDevice(pattern: number | number[]) {
