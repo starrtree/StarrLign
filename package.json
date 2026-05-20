@@ -6,7 +6,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "node scripts/run-local-bin.mjs next dev -p 3001",
+    "dev": "node scripts/run-local-bin.mjs next dev -p 3000",
     "build": "node scripts/run-local-bin.mjs next build && node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/server.js",
     "lint": "node scripts/run-local-bin.mjs eslint .",

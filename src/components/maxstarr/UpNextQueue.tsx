@@ -8,10 +8,11 @@ import { cn } from '@/lib/utils';
 interface UpNextCardProps {
   task: Task;
   onStart: () => void;
+  onOpen: () => void;
   onEdit: () => void;
 }
 
-function UpNextCard({ task, onStart, onEdit }: UpNextCardProps) {
+function UpNextCard({ task, onStart, onOpen, onEdit }: UpNextCardProps) {
   const duration = formatDuration(task.durationHours, task.durationMinutes);
   const { projects } = useStore();
   
@@ -36,7 +37,7 @@ function UpNextCard({ task, onStart, onEdit }: UpNextCardProps) {
 
   return (
     <div
-      onClick={onEdit}
+      onClick={onOpen}
       className="border-[2px] border-black rounded-lg p-5 flex items-center justify-between shadow-[4px_4px_0_black] cursor-pointer transition-all duration-200 hover:shadow-[6px_6px_0_black] hover:translate-x-[-2px] hover:translate-y-[-2px] group"
       style={{ backgroundColor: cardColor }}
     >
@@ -57,22 +58,34 @@ function UpNextCard({ task, onStart, onEdit }: UpNextCardProps) {
           )}
         </div>
       </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onStart();
-        }}
-        className="px-3 py-1.5 bg-black text-[var(--brand-yellow)] text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_var(--brand-yellow)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0_var(--brand-yellow)] active:translate-x-0 active:translate-y-0 active:shadow-none btn-shine"
-        style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-      >
-        START
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="px-2.5 py-1 bg-white/90 text-black text-[10px] font-bold tracking-wider border-[2px] border-black rounded-lg"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          EDIT
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onStart();
+          }}
+          className="px-3 py-1.5 bg-black text-[var(--brand-yellow)] text-xs font-bold tracking-wider border-[2px] border-black rounded-lg cursor-pointer transition-all duration-150 shadow-[3px_3px_0_var(--brand-yellow)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0_var(--brand-yellow)] active:translate-x-0 active:translate-y-0 active:shadow-none btn-shine"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          START
+        </button>
+      </div>
     </div>
   );
 }
 
 export default function UpNextQueue() {
-  const { tasks, updateTask, setEditingTaskId, setModalOpen, setCurrentView } = useStore();
+  const { tasks, updateTask, setEditingTaskId, setModalOpen, setCurrentView, setDetailMode } = useStore();
 
   // Priority order (higher = more important)
   const priorityOrder = { high: 3, medium: 2, low: 1 };
@@ -100,6 +113,13 @@ export default function UpNextQueue() {
 
   const handleEdit = (taskId: string) => {
     setEditingTaskId(taskId);
+    setDetailMode(false);
+    setModalOpen(true);
+  };
+
+  const handleOpen = (taskId: string) => {
+    setEditingTaskId(taskId);
+    setDetailMode(true);
     setModalOpen(true);
   };
 
@@ -139,6 +159,7 @@ export default function UpNextQueue() {
               key={task.id}
               task={task}
               onStart={() => handleStart(task.id)}
+              onOpen={() => handleOpen(task.id)}
               onEdit={() => handleEdit(task.id)}
             />
           ))
@@ -147,4 +168,3 @@ export default function UpNextQueue() {
     </>
   );
 }
-
