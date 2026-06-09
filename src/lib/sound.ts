@@ -11,96 +11,71 @@ export type AppSound =
   | 'moneyDelete'
   | 'achievement';
 
-const SOUND_FILES: Record<AppSound, string> = {
-  taskComplete: '/sounds/task-complete.mp3',
-  subtaskToggle: '/sounds/subtask-toggle.mp3',
-  subtaskComplete: '/sounds/subtask-complete.mp3',
-  projectComplete: '/sounds/project-complete.mp3',
-  cardComplete: '/sounds/cashchaching.mp3',
-  taskSwipe: '/sounds/task-swipe-whoosh.mp3',
-  uiOpen: '/sounds/ui-open-pop.mp3',
-  uiClose: '/sounds/ui-close-tap.mp3',
-  moneyAdd: '/sounds/money-add-chime.mp3',
-  moneyDelete: '/sounds/money-delete-soft.mp3',
-  achievement: '/sounds/achievement-shine.mp3',
+const DEFAULT_VOLUME = 0.68;
+
+const SOUND_FILES: Record<AppSound, string[]> = {
+  taskComplete: ['/sounds/task-complete.mp3', '/api/sounds/task-complete.mp3', '/api/sounds/task complete.mp3'],
+  subtaskToggle: ['/sounds/subtask-toggle.mp3', '/api/sounds/subtask-toggle.mp3', '/api/sounds/subtask toggle.mp3'],
+  subtaskComplete: ['/sounds/subtask-complete.mp3', '/api/sounds/subtask-complete.mp3', '/api/sounds/subtask complete.mp3'],
+  projectComplete: ['/sounds/project-complete.mp3', '/api/sounds/project-complete.mp3', '/api/sounds/project complete.mp3'],
+  cardComplete: [
+    '/sounds/cashchaching.mp3',
+    '/api/sounds/cashchaching.mp3',
+    '/api/sounds/caching.mp3',
+    '/api/sounds/chaching.mp3',
+    '/api/sounds/cash-chaching.mp3',
+  ],
+  taskSwipe: ['/sounds/task-swipe-whoosh.mp3', '/api/sounds/task-swipe-whoosh.mp3', '/api/sounds/task swipe whoosh.mp3'],
+  uiOpen: ['/sounds/ui-open-pop.mp3', '/api/sounds/ui-open-pop.mp3', '/api/sounds/open.mp3'],
+  uiClose: ['/sounds/ui-close-tap.mp3', '/api/sounds/ui-close-tap.mp3', '/api/sounds/close.mp3'],
+  moneyAdd: ['/sounds/money-add-chime.mp3', '/api/sounds/money-add-chime.mp3', '/api/sounds/money add chime.mp3'],
+  moneyDelete: ['/sounds/money-delete-soft.mp3', '/api/sounds/money-delete-soft.mp3', '/api/sounds/money delete soft.mp3'],
+  achievement: ['/sounds/achievement-shine.mp3', '/api/sounds/achievement-shine.mp3', '/api/sounds/achievement shine.mp3'],
 };
 
-const SOUND_FALLBACKS: Partial<Record<AppSound, string[]>> = {
-  cardComplete: ['/sounds/caching.mp3', '/sounds/chaching.mp3', '/sounds/cash-chaching.mp3'],
-  taskComplete: ['/sounds/task complete.mp3', '/sounds/task-complete.wav'],
-  uiOpen: ['/sounds/open.mp3'],
-  uiClose: ['/sounds/close.mp3'],
-};
+function getVolume(sound: AppSound) {
+  if (sound === 'projectComplete' || sound === 'cardComplete' || sound === 'achievement') return 0.74;
+  if (sound === 'uiOpen' || sound === 'uiClose') return 0.58;
+  if (sound === 'moneyDelete' || sound === 'taskSwipe') return 0.62;
+  return DEFAULT_VOLUME;
+}
+
+function warnSoundFailure(sound: AppSound, candidates: string[]) {
+  if (process.env.NODE_ENV === 'production') return;
+  console.warn(`[StarrLign sound] Could not play "${sound}". Tried: ${candidates.join(', ')}`);
+}
 
 export function playAppSound(sound: AppSound, enabled: boolean) {
   if (!enabled || typeof window === 'undefined') return;
-  const src = SOUND_FILES[sound];
-  if (!src) return;
-  const candidates = [src, ...(SOUND_FALLBACKS[sound] || [])];
 
+  const candidates = SOUND_FILES[sound] || [];
+  if (candidates.length === 0) return;
+
+  let candidateIndex = 0;
   const audio = new Audio();
-  audio.src = candidates[0];
-  audio.onerror = () => {
-    const next = candidates.find((candidate) => candidate !== audio.src);
-    if (next) {
-      audio.src = next;
-      void audio.play().catch(() => {});
+  audio.preload = 'auto';
+  audio.volume = getVolume(sound);
+
+  const tryPlay = () => {
+    const src = candidates[candidateIndex];
+    if (!src) {
+      warnSoundFailure(sound, candidates);
       return;
     }
-    playFallbackTone(sound);
-  };
-  audio.volume =
-    sound === 'projectComplete'
-      ? 0.78
-      : sound === 'cardComplete'
-        ? 0.8
-        : sound === 'achievement'
-          ? 0.72
-          : sound === 'moneyAdd'
-            ? 0.62
-            : sound === 'moneyDelete'
-              ? 0.5
-              : sound === 'taskSwipe'
-                ? 0.48
-                : sound === 'uiOpen' || sound === 'uiClose'
-                  ? 0.42
-                  : sound === 'taskComplete'
-                    ? 0.6
-                    : 0.45;
-  void audio.play().catch(() => {
-    playFallbackTone(sound);
-  });
-}
 
-function playFallbackTone(sound: AppSound) {
-  if (typeof window === 'undefined') return;
-  const Ctx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctx) return;
-  const ctx = new Ctx();
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  const frequencyMap: Record<AppSound, number> = {
-    taskComplete: 660,
-    subtaskToggle: 520,
-    subtaskComplete: 720,
-    projectComplete: 780,
-    cardComplete: 600,
-    taskSwipe: 420,
-    uiOpen: 500,
-    uiClose: 460,
-    moneyAdd: 840,
-    moneyDelete: 380,
-    achievement: 920,
+    audio.src = src;
+    void audio.play().catch(() => {
+      candidateIndex += 1;
+      tryPlay();
+    });
   };
 
-  oscillator.type = 'triangle';
-  oscillator.frequency.value = frequencyMap[sound];
-  gain.gain.value = sound === 'uiOpen' || sound === 'uiClose' ? 0.015 : 0.025;
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
-  oscillator.start();
-  oscillator.stop(ctx.currentTime + 0.08);
+  audio.onerror = () => {
+    candidateIndex += 1;
+    tryPlay();
+  };
+
+  tryPlay();
 }
 
 export function vibrateDevice(pattern: number | number[]) {
