@@ -29,10 +29,30 @@ const projectTextColor: Record<string, string> = {
 };
 
 export default function CalendarView() {
-  const { tasks, projects, projectCategories, tags, tagFilter, toggleTagFilter, clearTagFilter } = useStore();
+  const {
+    tasks,
+    projects,
+    projectCategories,
+    tags,
+    tagFilter,
+    toggleTagFilter,
+    clearTagFilter,
+    setEditingTaskId,
+    setDetailMode,
+    setModalOpen,
+  } = useStore();
   const [cursor, setCursor] = useState(() => new Date());
   const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'doing' | 'review' | 'done'>('all');
+
+  const openTaskDetail = (taskId: string) => {
+    setEditingTaskId(taskId);
+    setDetailMode(true);
+    setModalOpen(true);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('starrlign:ui-open'));
+    }
+  };
 
   const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const gridStart = new Date(monthStart);
@@ -182,10 +202,12 @@ export default function CalendarView() {
               <div className="text-xs font-bold mb-1">{day.date.getDate()}</div>
               <div className="space-y-1">
                 {day.tasks.slice(0, 4).map((task) => (
-                  <div
+                  <button
+                    type="button"
                     key={`${day.key}-${task.id}`}
+                    onClick={() => openTaskDetail(task.id)}
                     className={cn(
-                      "text-[10px] p-1.5 rounded border border-black/25 truncate font-medium shadow-[1px_1px_0_black/15] flex items-center gap-1.5",
+                      "w-full text-left text-[10px] p-1.5 rounded border border-black/25 truncate font-medium shadow-[1px_1px_0_black/15] flex items-center gap-1.5 hover:translate-x-[-1px] hover:translate-y-[-1px] transition-transform",
                       projectTextColor[getProjectColorKey(task.project)] || 'text-black'
                     )}
                     style={{ backgroundColor: projectColorHex[getProjectColorKey(task.project)] || projectColorHex.yellow }}
@@ -196,7 +218,7 @@ export default function CalendarView() {
                       className="w-3 h-3 rounded-full border border-black/25 flex-shrink-0"
                       style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
                     />
-                  </div>
+                  </button>
                 ))}
                 {day.tasks.length > 4 && <div className="text-[10px] text-black/60">+{day.tasks.length - 4} more</div>}
               </div>
