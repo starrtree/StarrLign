@@ -16,6 +16,7 @@ import ArchiveView from '@/components/maxstarr/ArchiveView';
 import MoneyView from '@/components/maxstarr/MoneyView';
 import CalendarView from '@/components/maxstarr/CalendarView';
 import DataProvider from '@/components/maxstarr/DataProvider';
+import IntroVideoGate from '@/components/maxstarr/IntroVideoGate';
 import { useStore } from '@/lib/store';
 
 function AppContent() {
@@ -72,8 +73,10 @@ function AppContent() {
 
 export default function Home() {
   return (
-    <DataProvider>
-      <AppContent />
-    </DataProvider>
+    <IntroVideoGate>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </IntroVideoGate>
   );
 }
