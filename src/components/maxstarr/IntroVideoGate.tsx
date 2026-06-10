@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const MOBILE_VIDEOS = [
-  '/starrLign_loading_screen%28Mobile%29.mp4',
-  '/starrLign_loading_screen(Mobile).mp4',
+  '/starrLign_loading_screen_Mobile.mp4',
   '/starrLign_loading_screen.mov',
 ];
 
 const DESKTOP_VIDEOS = [
-  '/starrLign_loading_screen%28Desktop%29.mp4',
-  '/starrLign_loading_screen(Desktop).mp4',
+  '/starrLign_loading_screen_Desktop.mp4',
   '/starrLign_loading_screen.mov',
 ];
 
