@@ -4,6 +4,18 @@ import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType,
 // UUID generator
 const uuid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+function getInitialTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light';
+  const stored = window.localStorage.getItem('starrlign-theme');
+  return stored === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme: 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  window.localStorage.setItem('starrlign-theme', theme);
+}
+
 // Initial tasks data - motivational templates
 const initialTasks: Task[] = [
   {
@@ -87,7 +99,6 @@ const initialBudgets: Budget[] = [
   { id: 'b-saving', name: 'Saving', limit: 1200 },
   { id: 'b-personal', name: 'Personal', limit: 900 },
 ];
-
 const initialMoneyEntries: MoneyEntry[] = [];
 const initialInvestmentPositions: InvestmentPosition[] = [];
 
@@ -234,7 +245,7 @@ export const useStore = create<AppState>((set, get) => ({
   editingProjectId: null,
   isSettingsOpen: false,
   isSearchOpen: false,
-  theme: 'light',
+  theme: getInitialTheme(),
   soundEnabled: true,
   autoSetProjectForTask: null,
 
@@ -258,36 +269,32 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => {
       let previousTask: Task | null = null;
       let updatedTask: Task | null = null;
-      const tasks = state.tasks.map((task) => {
+      const updatedTasks = state.tasks.map((task) => {
         if (task.id !== id) return task;
         previousTask = task;
-        const nextTask = { ...task, ...updates } as Task;
-        const normalizedLinkedProjects =
-          nextTask.linkedProjects && nextTask.linkedProjects.length > 0
-            ? Array.from(new Set([nextTask.project, ...nextTask.linkedProjects]))
-            : [nextTask.project];
-        const dependencyTaskIds = nextTask.dependencyTaskIds
-          ? [...new Set(nextTask.dependencyTaskIds.filter(Boolean).filter((depId) => depId !== id))]
-          : [];
-        updatedTask = { ...nextTask, linkedProjects: normalizedLinkedProjects, dependencyTaskIds };
+        updatedTask = { ...task, ...updates };
         return updatedTask;
       });
 
-      if (previousTask && updatedTask && previousTask.status !== 'done' && updatedTask.status === 'done') {
-        const affectedProjects = updatedTask.linkedProjects || [updatedTask.project];
-        completedProjects = affectedProjects.filter((projectName) => {
-          const projectTasks = tasks.filter(
-            (task) =>
-              !task.isArchived &&
-              (task.project === projectName || (task.linkedProjects || []).includes(projectName))
-          );
-          return projectTasks.length > 0 && projectTasks.every((task) => task.status === 'done');
-        });
+      if (updatedTask && previousTask?.status !== 'done' && updatedTask.status === 'done' && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('starrlign:task-complete'));
       }
 
-      return { tasks };
+      const affectedProjectNames = new Set<string>();
+      if (updatedTask) {
+        [updatedTask.project, ...(updatedTask.linkedProjects || [])].filter(Boolean).forEach((name) => affectedProjectNames.add(name));
+      }
+
+      completedProjects = Array.from(affectedProjectNames).filter((projectName) => {
+        const projectTasks = updatedTasks.filter(
+          (task) => !task.isArchived && (task.project === projectName || (task.linkedProjects || []).includes(projectName))
+        );
+        return projectTasks.length > 0 && projectTasks.every((task) => task.status === 'done');
+      });
+
+      return { tasks: updatedTasks };
     });
-    if (typeof window !== 'undefined') {
+    if (completedProjects.length > 0 && typeof window !== 'undefined') {
       completedProjects.forEach((projectName) => {
         window.dispatchEvent(new CustomEvent('starrlign:project-complete', { detail: { projectName } }));
       });
@@ -299,11 +306,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (draggedTaskId === targetTaskId) return;
     set((state) => {
       const projectTaskIds = state.tasks
-        .filter(
-          (task) =>
-            !task.isArchived &&
-            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
-        )
+        .filter((task) => task.project === projectName && !task.isArchived)
         .map((task) => task.id);
 
       const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
@@ -320,11 +323,7 @@ export const useStore = create<AppState>((set, get) => ({
         .filter((task): task is Task => Boolean(task));
 
       const nonProjectTasks = state.tasks.filter(
-        (task) =>
-          !(
-            !task.isArchived &&
-            (task.project === projectName || (task.linkedProjects || []).includes(projectName))
-          )
+        (task) => !(task.project === projectName && !task.isArchived)
       );
 
       return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
@@ -334,12 +333,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteTask: (id) => {
     set((state) => ({
-      tasks: state.tasks
-        .filter((task) => task.id !== id)
-        .map((task) => ({
-          ...task,
-          dependencyTaskIds: (task.dependencyTaskIds || []).filter((depId) => depId !== id),
-        })),
+      tasks: state.tasks.filter((task) => task.id !== id),
+      editingTaskId: state.editingTaskId === id ? null : state.editingTaskId,
     }));
     saveToDatabase(get());
   },
@@ -363,77 +358,44 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleSubtask: (taskId, subtaskId) => {
-    set((state) => {
-      const tasks = state.tasks.map((task) => {
-        if (task.id === taskId) {
-          const newSubtasks = task.subtasks.map(st => 
-            st.id === subtaskId ? { ...st, done: !st.done } : st
-          );
-          const doneCount = newSubtasks.filter(s => s.done).length;
-          const progress = newSubtasks.length > 0 
-            ? Math.round((doneCount / newSubtasks.length) * 100) 
-            : task.progress;
-          return { ...task, subtasks: newSubtasks, progress };
-        }
-        return task;
-      });
-      return { tasks };
-    });
+    set((state) => ({
+      tasks: state.tasks.map((task) => {
+        if (task.id !== taskId) return task;
+        const updatedSubtasks = task.subtasks.map((subtask) =>
+          subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask
+        );
+        return { ...task, subtasks: updatedSubtasks };
+      }),
+    }));
     saveToDatabase(get());
   },
 
   addSubtask: (taskId, text) => {
-    set((state) => {
-      const tasks = state.tasks.map((task) => {
-        if (task.id === taskId && text.trim()) {
-          const newSubtask: Subtask = {
-            id: uuid(),
-            text: text.trim(),
-            done: false
-          };
-          const newSubtasks = [...task.subtasks, newSubtask];
-          const doneCount = newSubtasks.filter(s => s.done).length;
-          const progress = Math.round((doneCount / newSubtasks.length) * 100);
-          return { ...task, subtasks: newSubtasks, progress };
-        }
-        return task;
-      });
-      return { tasks };
-    });
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === taskId ? { ...task, subtasks: [...task.subtasks, { id: uuid(), text, done: false }] } : task
+      ),
+    }));
     saveToDatabase(get());
   },
 
   updateSubtask: (taskId, subtaskId, text) => {
-    set((state) => {
-      const tasks = state.tasks.map((task) => {
-        if (task.id === taskId) {
-          const newSubtasks = task.subtasks.map(st =>
-            st.id === subtaskId ? { ...st, text } : st
-          );
-          return { ...task, subtasks: newSubtasks };
-        }
-        return task;
-      });
-      return { tasks };
-    });
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === taskId
+          ? { ...task, subtasks: task.subtasks.map((subtask) => (subtask.id === subtaskId ? { ...subtask, text } : subtask)) }
+          : task
+      ),
+    }));
     saveToDatabase(get());
   },
 
   deleteSubtask: (taskId, subtaskId) => {
-    set((state) => {
-      const tasks = state.tasks.map((task) => {
-        if (task.id === taskId) {
-          const newSubtasks = task.subtasks.filter(st => st.id !== subtaskId);
-          const doneCount = newSubtasks.filter(s => s.done).length;
-          const progress = newSubtasks.length > 0 
-            ? Math.round((doneCount / newSubtasks.length) * 100) 
-            : 0;
-          return { ...task, subtasks: newSubtasks, progress };
-        }
-        return task;
-      });
-      return { tasks };
-    });
+    set((state) => ({
+      tasks: state.tasks.map((task) =>
+        task.id === taskId ? { ...task, subtasks: task.subtasks.filter((subtask) => subtask.id !== subtaskId) } : task
+      ),
+    }));
     saveToDatabase(get());
   },
 
@@ -462,27 +424,17 @@ export const useStore = create<AppState>((set, get) => ({
   setEditingTaskId: (id) => set({ editingTaskId: id }),
 
   setModalOpen: (open) => set({ isModalOpen: open }),
-
   setDetailMode: (mode) => set({ isDetailMode: mode }),
-
   setSearchQuery: (query) => set({ searchQuery: query }),
 
-  tagFilter: [],
   setTagFilter: (tags) => set({ tagFilter: tags }),
-  
-  // Toggle a tag in the filter array
-  toggleTagFilter: (tag) => set((state) => {
-    const currentTags = state.tagFilter || [];
-    if (currentTags.includes(tag)) {
-      // Remove the tag if already selected
-      return { tagFilter: currentTags.filter(t => t !== tag) };
-    } else {
-      // Add the tag if not selected
-      return { tagFilter: [...currentTags, tag] };
-    }
-  }),
-  
-  // Clear all tag filters
+  toggleTagFilter: (tag) => {
+    set((state) => ({
+      tagFilter: state.tagFilter.includes(tag)
+        ? state.tagFilter.filter(t => t !== tag)
+        : [...state.tagFilter, tag]
+    }));
+  },
   clearTagFilter: () => set({ tagFilter: [] }),
 
   // Document actions
@@ -491,16 +443,13 @@ export const useStore = create<AppState>((set, get) => ({
       id: uuid(),
       title: 'Untitled Document',
       projectId: projectId || null,
-      blocks: [
-        createBlock('h1', ''),
-        createBlock('text', ''),
-      ],
+      blocks: [createBlock('text', '')],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       wordCount: 0,
       isArchived: false,
     };
-    set((state) => ({ 
+    set((state) => ({
       documents: [...state.documents, newDoc],
       selectedDocumentId: newDoc.id,
     }));
@@ -764,7 +713,6 @@ export const useStore = create<AppState>((set, get) => ({
       const projects = [...state.projects];
       const [removed] = projects.splice(startIndex, 1);
       projects.splice(endIndex, 0, removed);
-      // Update order property
       const reordered = projects.map((p, i) => ({ ...p, order: i }));
       return { projects: reordered };
     });
@@ -777,7 +725,10 @@ export const useStore = create<AppState>((set, get) => ({
   
   // Settings
   setSettingsOpen: (open) => set({ isSettingsOpen: open }),
-  setTheme: (theme) => set({ theme }),
+  setTheme: (theme) => {
+    applyTheme(theme);
+    set({ theme });
+  },
   setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
   
   // Search
@@ -807,7 +758,6 @@ export const useStore = create<AppState>((set, get) => ({
   deleteProjectCategory: (id) => {
     set((state) => ({
       projectCategories: state.projectCategories.filter(cat => cat.id !== id),
-      // Remove category from projects but don't delete projects
       projects: state.projects.map(p => 
         p.category === id ? { ...p, category: null } : p
       ),
@@ -849,134 +799,64 @@ export const useStore = create<AppState>((set, get) => ({
       budgets: defaultSnapshot.budgets,
       moneyEntries: defaultSnapshot.moneyEntries,
       investmentPositions: defaultSnapshot.investmentPositions,
-      baseIncomeMonthly: defaultSnapshot.baseIncomeMonthly || 0,
+      baseIncomeMonthly: defaultSnapshot.baseIncomeMonthly,
       editingTaskId: null,
       isModalOpen: false,
       isDetailMode: false,
+      selectedProjectId: null,
+      selectedDocumentId: null,
       searchQuery: '',
       tagFilter: [],
       isProjectModalOpen: false,
       editingProjectId: null,
-      isSearchOpen: false,
       autoSetProjectForTask: null,
-      journeyStartDate: null,
     });
-  },
-  
-  // Hydrate from database
-  hydrateFromDatabase: async () => {
-    const data = await loadFromDatabase();
-    if (!data) return;
-
-    const snapshot = isDatabaseSnapshotEmpty(data) ? createDefaultSnapshot() : data;
-
-    set({
-      tasks: snapshot.tasks,
-      projects: snapshot.projects,
-      projectCategories: snapshot.projectCategories,
-      documents: snapshot.documents,
-      tags: snapshot.tags,
-      budgets: snapshot.budgets || initialBudgets,
-      moneyEntries: snapshot.moneyEntries || [],
-      investmentPositions: snapshot.investmentPositions || [],
-      baseIncomeMonthly: snapshot.baseIncomeMonthly || 0,
-    });
-
-    if (isDatabaseSnapshotEmpty(data)) {
-      try {
-        await persistSnapshot(snapshot);
-      } catch (error) {
-        console.error('Failed to seed initial database state:', error);
-      }
-    }
   },
 }));
 
-// Helper to create a new project
-export const createNewProject = (overrides: Partial<Project> = {}): Project => ({
-  id: uuid(),
-  name: '',
-  color: 'blue',
-  icon: '📁',
-  tasks: 0,
-  completed: 0,
-  startDate: '',
-  endDate: '',
-  due: 'Ongoing',
-  order: 0,
-  isArchived: false,
-  category: null,
-  ...overrides,
-});
+// Helper functions
+export const formatDate = (dateStr: string): string => {
+  if (!dateStr || dateStr === 'idk yet' || dateStr === 'Ongoing') return dateStr;
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
-// Utility functions
-export const createNewTask = (overrides: Partial<Task> = {}): Task => ({
-  id: uuid(),
-  title: '',
-  project: 'Your Journey',
-  linkedProjects: ['Your Journey'],
-  priority: 'medium',
-  status: 'todo',
-  startDate: '',
-  endDate: '',
-  due: '',
-  durationHours: 0,
-  durationMinutes: 30,
-  tags: [],
-  progress: 0,
-  notes: '',
-  dependencyTaskIds: [],
-  subtasks: [],
-  timerStartedAt: null,
-  lastTimerStartAt: null,
-  lastTimerEndAt: null,
-  isArchived: false,
-  ...overrides,
-});
-
-export const createNewBlock = (type: BlockType): Block => ({
-  id: uuid(),
-  type,
-  content: '',
-  meta: {},
-});
-
-// Helper to format duration
 export const formatDuration = (hours: number, minutes: number): string => {
-  if (hours === 0 && minutes === 0) return '--';
-  const parts = [];
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-  return parts.join(' ') || '--';
+  if (hours === 0 && minutes === 0) return '0m';
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 };
 
-// Helper to calculate word count
 export const calculateWordCount = (blocks: Block[]): number => {
-  const text = blocks
-    .filter(b => ['h1', 'h2', 'h3', 'text', 'comment', 'callout'].includes(b.type))
-    .map(b => b.content.replace(/<[^>]+>/g, ' '))
-    .join(' ');
-  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  return blocks.reduce((count, block) => {
+    if (['text', 'h1', 'h2', 'h3', 'callout'].includes(block.type)) {
+      return count + block.content.split(/\s+/).filter(word => word.length > 0).length;
+    }
+    return count;
+  }, 0);
 };
 
-// Helper to format relative time
 export const formatRelativeTime = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
   if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  return date.toLocaleDateString();
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return formatDate(dateStr);
 };
 
-// Helper to estimate reading time
 export const estimateReadTime = (wordCount: number): string => {
   const mins = Math.ceil(wordCount / 200);
   return `~${mins} min read`;
 };
+
+if (typeof window !== 'undefined') {
+  applyTheme(getInitialTheme());
+}
