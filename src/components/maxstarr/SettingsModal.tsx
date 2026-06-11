@@ -2,13 +2,13 @@
 
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { X, Moon, Sun, Download, Trash2, RefreshCw, Info, Database, Volume2, VolumeX, Calendar, Rocket } from 'lucide-react';
+import { X, Moon, Sun, Download, Trash2, RefreshCw, Info, Database, Volume2, VolumeX, Rocket } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 
 export default function SettingsModal() {
-  const { 
-    isSettingsOpen, 
+  const {
+    isSettingsOpen,
     setSettingsOpen,
     tasks,
     projects,
@@ -20,7 +20,8 @@ export default function SettingsModal() {
     setSoundEnabled,
     deleteTask,
     journeyStartDate,
-    setJourneyStartDate
+    setJourneyStartDate,
+    resetAllData,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'general' | 'data' | 'about'>('general');
@@ -28,15 +29,11 @@ export default function SettingsModal() {
   const [resetConfirmationText, setResetConfirmationText] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
+  const isDarkMode = theme === 'dark';
 
-  // Apply theme class to document
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
 
   if (!isSettingsOpen) return null;
 
@@ -54,7 +51,7 @@ export default function SettingsModal() {
       tags,
       exportedAt: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -64,7 +61,7 @@ export default function SettingsModal() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast.success('Data exported successfully');
   };
 
@@ -79,7 +76,7 @@ export default function SettingsModal() {
   };
 
   const handleToggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+    const newTheme = isDarkMode ? 'light' : 'dark';
     setTheme(newTheme);
     toast.success(`Switched to ${newTheme} mode`);
   };
@@ -135,23 +132,22 @@ export default function SettingsModal() {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4"
       onClick={handleClose}
     >
-      <div 
+      <div
         className="bg-[var(--shimmering-opal)] dark:bg-[var(--brand-blue)] border-[3px] border-[var(--brand-blue)] dark:border-black rounded-lg shadow-[8px_8px_0_black] w-full max-w-lg animate-in fade-in-0 zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="bg-[var(--brand-blue)] px-4 py-3 flex items-center justify-between dark:bg-black">
-          <h2 
+          <h2
             className="text-lg text-white dark:text-[var(--brand-yellow)] tracking-wide"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            ⚙️ SETTINGS
+            SETTINGS
           </h2>
-          <button 
+          <button
             onClick={handleClose}
             className="text-white/70 hover:text-white transition-colors cursor-pointer"
           >
@@ -159,18 +155,16 @@ export default function SettingsModal() {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b-[2px] border-[var(--brand-blue)] dark:border-black">
           {(['general', 'data', 'about'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer",
-                activeTab === tab 
-                  ? "bg-[var(--brand-blue)] text-white dark:bg-[var(--brand-yellow)] dark:text-black border-b-[3px] border-[var(--brand-blue-dark)] dark:border-black -mb-[2px]" 
-                  : "text-[var(--gray-600)] hover:bg-[var(--gray-200)] dark:text-white/70 dark:hover:bg-white/10",
-                "uppercase tracking-wider"
+                'flex-1 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer uppercase tracking-wider',
+                activeTab === tab
+                  ? 'bg-[var(--brand-blue)] text-white dark:bg-[var(--brand-yellow)] dark:text-black border-b-[3px] border-[var(--brand-blue-dark)] dark:border-black -mb-[2px]'
+                  : 'text-[var(--gray-600)] hover:bg-[var(--gray-200)] dark:text-white/70 dark:hover:bg-white/10'
               )}
               style={{ fontFamily: 'var(--font-space-mono), monospace' }}
             >
@@ -179,45 +173,35 @@ export default function SettingsModal() {
           ))}
         </div>
 
-        {/* Content */}
         <div className="p-4 min-h-[300px]">
           {activeTab === 'general' && (
             <div className="space-y-4">
-              {/* Theme Toggle */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div>
                     <div className="font-medium text-sm text-[var(--gray-800)] dark:text-white">Appearance</div>
                     <div className="text-xs text-[var(--gray-500)] dark:text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                      {theme === 'light' ? 'Light mode' : 'Dark mode'}
+                      Currently {isDarkMode ? 'Dark mode' : 'Light mode'}
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={handleToggleTheme}
+                    aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                     className={cn(
-                      "flex items-center gap-2 p-1 rounded-lg transition-all cursor-pointer",
-                      theme === 'light' 
-                        ? "bg-[var(--gray-200)] dark:bg-[var(--brand-yellow)]" 
-                        : "bg-[var(--gray-200)] dark:bg-[var(--gray-700)]"
+                      'min-w-[150px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-[2px] border-black font-bold text-xs tracking-wider transition-all cursor-pointer hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_black]',
+                      isDarkMode
+                        ? 'bg-[var(--brand-yellow)] text-black'
+                        : 'bg-[var(--brand-blue)] text-white'
                     )}
+                    style={{ fontFamily: 'var(--font-space-mono), monospace' }}
                   >
-                    <div className={cn(
-                      "p-2 rounded-lg transition-all",
-                      theme === 'light' && "bg-[var(--brand-blue)] border-[2px] border-[var(--brand-blue)] dark:bg-black dark:border-black"
-                    )}>
-                      <Sun className={cn("w-4 h-4", theme === 'light' ? "text-white dark:text-[var(--brand-yellow)]" : "text-[var(--gray-400)]")} />
-                    </div>
-                    <div className={cn(
-                      "p-2 rounded-lg transition-all",
-                      theme === 'dark' && "dark:bg-[var(--brand-blue)] dark:border-[2px] dark:border-black"
-                    )}>
-                      <Moon className={cn("w-4 h-4", theme === 'dark' ? "dark:text-white" : "text-[var(--gray-400)] dark:text-white/40")} />
-                    </div>
+                    {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    {isDarkMode ? 'LIGHT MODE' : 'DARK MODE'}
                   </button>
                 </div>
               </div>
 
-              {/* Sound Toggle */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -229,19 +213,19 @@ export default function SettingsModal() {
                   <button
                     onClick={handleToggleSound}
                     className={cn(
-                      "w-14 h-7 rounded-full p-0.5 cursor-pointer transition-all",
-                      soundEnabled 
-                        ? "bg-[var(--brand-blue)] dark:bg-[var(--brand-yellow)]" 
-                        : "bg-[var(--gray-300)] dark:bg-white/20"
+                      'w-14 h-7 rounded-full p-0.5 cursor-pointer transition-all',
+                      soundEnabled
+                        ? 'bg-[var(--brand-blue)] dark:bg-[var(--brand-yellow)]'
+                        : 'bg-[var(--gray-300)] dark:bg-white/20'
                     )}
                   >
                     <div className={cn(
-                      "w-6 h-6 rounded-full transition-all flex items-center justify-center",
-                      soundEnabled 
-                        ? "translate-x-7 bg-white dark:bg-black" 
-                        : "translate-x-0 bg-white"
+                      'w-6 h-6 rounded-full transition-all flex items-center justify-center',
+                      soundEnabled
+                        ? 'translate-x-7 bg-white dark:bg-black'
+                        : 'translate-x-0 bg-white'
                     )}>
-                      {soundEnabled 
+                      {soundEnabled
                         ? <Volume2 className="w-3.5 h-3.5 text-[var(--brand-blue)] dark:text-[var(--brand-yellow)]" />
                         : <VolumeX className="w-3.5 h-3.5 text-[var(--gray-400)]" />
                       }
@@ -250,7 +234,6 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              {/* Default View */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="flex items-center justify-between">
                   <div>
@@ -268,7 +251,6 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              {/* Journey Start Date */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -276,7 +258,7 @@ export default function SettingsModal() {
                     <div>
                       <div className="font-medium text-sm text-[var(--gray-800)] dark:text-white">Journey Start Date</div>
                       <div className="text-xs text-[var(--gray-500)] dark:text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                        {journeyStartDate 
+                        {journeyStartDate
                           ? `Started ${new Date(journeyStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
                           : 'Track your progress from Day 1'
                         }
@@ -313,7 +295,6 @@ export default function SettingsModal() {
 
           {activeTab === 'data' && (
             <div className="space-y-4">
-              {/* Stats */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="flex items-center gap-2 mb-3 text-[var(--brand-blue)] dark:text-white">
                   <Database className="w-4 h-4" />
@@ -339,7 +320,6 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              {/* Export */}
               <button
                 onClick={handleExportData}
                 className="w-full p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg flex items-center justify-between hover:bg-[var(--gray-100)] dark:hover:bg-[var(--brand-blue-dark)] transition-colors cursor-pointer group bg-white dark:bg-[var(--brand-blue-dark)]/30"
@@ -358,7 +338,6 @@ export default function SettingsModal() {
                 </span>
               </button>
 
-              {/* Clear Completed */}
               <button
                 onClick={handleClearCompletedTasks}
                 className="w-full p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg flex items-center justify-between hover:bg-[var(--gray-100)] dark:hover:bg-[var(--brand-blue-dark)] transition-colors cursor-pointer group bg-white dark:bg-[var(--brand-blue-dark)]/30"
@@ -377,7 +356,6 @@ export default function SettingsModal() {
                 </span>
               </button>
 
-              {/* Danger Zone */}
               <div className="p-4 border-[2px] border-[var(--brand-red)] rounded-lg bg-[var(--brand-red)]/10 dark:bg-[var(--brand-red)]/20">
                 <div className="flex items-center gap-2 mb-2">
                   <Trash2 className="w-4 h-4 text-[var(--brand-red)]" />
@@ -455,9 +433,8 @@ export default function SettingsModal() {
 
           {activeTab === 'about' && (
             <div className="space-y-4">
-              {/* Logo */}
               <div className="text-center py-6">
-                <div 
+                <div
                   className="text-4xl mb-2"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
@@ -472,26 +449,24 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              {/* Info */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="flex items-start gap-3">
                   <Info className="w-5 h-5 text-[var(--brand-blue)] dark:text-[var(--brand-yellow)] mt-0.5" />
                   <div className="text-[var(--gray-800)] dark:text-white">
                     <div className="font-medium text-sm mb-1">About This App</div>
                     <p className="text-xs text-[var(--gray-600)] dark:text-white/70 leading-relaxed" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                      StarrLign is a brutalist-style personal productivity system designed to help you focus on what matters. 
+                      StarrLign is a brutalist-style personal productivity system designed to help you focus on what matters.
                       Track projects, manage tasks, and organize your work with a bold, distraction-free interface.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Tech Stack */}
               <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
                 <div className="font-medium text-sm mb-2 text-[var(--gray-800)] dark:text-white">Built With</div>
                 <div className="flex flex-wrap gap-2">
                   {['Next.js', 'TypeScript', 'Tailwind CSS', 'Zustand', 'Bebas Neue', 'Space Mono'].map(tech => (
-                    <span 
+                    <span
                       key={tech}
                       className="text-[10px] px-2 py-1 bg-[var(--brand-blue)] dark:bg-[var(--brand-yellow)] text-white dark:text-black border-[2px] border-black rounded"
                       style={{ fontFamily: 'var(--font-space-mono), monospace' }}
@@ -505,7 +480,6 @@ export default function SettingsModal() {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-4 py-3 border-t-[2px] border-[var(--brand-blue)] dark:border-black bg-[var(--brand-blue)] dark:bg-black flex justify-end">
           <button
             onClick={handleClose}
