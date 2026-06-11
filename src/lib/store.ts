@@ -1,7 +1,17 @@
 import { create } from 'zustand';
-import { Task, Project, Block, ViewType, AppState, Subtask, Document, BlockType, ProjectCategory, Budget, MoneyEntry, InvestmentPosition } from './types';
+import {
+  AppState,
+  Block,
+  BlockType,
+  Budget,
+  Document,
+  InvestmentPosition,
+  MoneyEntry,
+  Project,
+  ProjectCategory,
+  Task,
+} from './types';
 
-// UUID generator
 const uuid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 function getInitialTheme(): 'light' | 'dark' {
@@ -16,39 +26,92 @@ function applyTheme(theme: 'light' | 'dark') {
   window.localStorage.setItem('starrlign-theme', theme);
 }
 
-// Initial tasks data - motivational templates
+export const createNewBlock = (type: BlockType, content = '', meta: Block['meta'] = {}): Block => ({
+  id: uuid(),
+  type,
+  content,
+  meta,
+});
+
+export const createNewTask = (data: Partial<Task> = {}): Task => ({
+  title: '',
+  project: 'General',
+  linkedProjects: data.project ? [data.project] : ['General'],
+  priority: 'medium',
+  status: 'todo',
+  startDate: '',
+  endDate: '',
+  due: '',
+  durationHours: 0,
+  durationMinutes: 30,
+  tags: [],
+  progress: 0,
+  notes: '',
+  dependencyTaskIds: [],
+  subtasks: [],
+  timerStartedAt: null,
+  lastTimerStartAt: null,
+  lastTimerEndAt: null,
+  isArchived: false,
+  ...data,
+  id: data.id || uuid(),
+  linkedProjects:
+    data.linkedProjects && data.linkedProjects.length > 0
+      ? Array.from(new Set(data.linkedProjects))
+      : [data.project || 'General'],
+  dependencyTaskIds: data.dependencyTaskIds ? Array.from(new Set(data.dependencyTaskIds.filter(Boolean))) : [],
+  tags: data.tags ? Array.from(new Set(data.tags.filter(Boolean))) : [],
+  subtasks: data.subtasks ? data.subtasks.map((subtask) => ({ id: subtask.id || uuid(), text: subtask.text, done: Boolean(subtask.done) })) : [],
+});
+
+export const createNewProject = (data: Partial<Project> = {}): Project => ({
+  name: '',
+  color: 'blue',
+  icon: '📁',
+  tasks: 0,
+  completed: 0,
+  startDate: '',
+  endDate: '',
+  due: '',
+  order: 0,
+  isArchived: false,
+  category: null,
+  ...data,
+  id: data.id || uuid(),
+});
+
 const initialTasks: Task[] = [
-  {
+  createNewTask({
     id: 't1',
     title: 'Define Your North Star',
     project: 'Your Journey',
     linkedProjects: ['Your Journey'],
     priority: 'high',
     status: 'doing',
-    startDate: '',
-    endDate: '',
-    due: '',
-    durationHours: 0,
     durationMinutes: 30,
     tags: ['Focus', 'Vision'],
-    progress: 0,
-    notes: "What is the one thing that, if accomplished, would make everything else easier? Write your North Star here and let it guide your focus.",
-    dependencyTaskIds: [],
+    notes: 'What is the one thing that, if accomplished, would make everything else easier? Write your North Star here and let it guide your focus.',
     subtasks: [
-      { id: uuid(), text: "Clarify your #1 priority", done: false },
-      { id: uuid(), text: "Break it into actionable steps", done: false },
-      { id: uuid(), text: "Commit to showing up daily", done: false }
+      { id: uuid(), text: 'Clarify your #1 priority', done: false },
+      { id: uuid(), text: 'Break it into actionable steps', done: false },
+      { id: uuid(), text: 'Commit to showing up daily', done: false },
     ],
-    isArchived: false
-  },
+  }),
 ];
 
-// Initial projects data - single template project
 const initialProjects: Project[] = [
-  { id: 'p1', name: 'Your Journey', color: 'yellow', icon: '⭐', tasks: 1, completed: 0, startDate: '', endDate: '', due: 'Now', order: 0, isArchived: false, category: null },
+  createNewProject({
+    id: 'p1',
+    name: 'Your Journey',
+    color: 'yellow',
+    icon: '⭐',
+    tasks: 1,
+    completed: 0,
+    due: 'Now',
+    order: 0,
+  }),
 ];
 
-// Initial project categories
 const initialProjectCategories: ProjectCategory[] = [
   { id: 'cat-work', name: 'Work', order: 0 },
   { id: 'cat-hobby1', name: 'Hobby 1', order: 1 },
@@ -57,35 +120,25 @@ const initialProjectCategories: ProjectCategory[] = [
   { id: 'cat-home', name: 'Home', order: 4 },
 ];
 
-// Initial tags - thematic and motivational
 const initialTags = ['Focus', 'Vision', 'Energy', 'Momentum', 'Breakthrough', 'Daily', 'Priority', 'Flow', 'Power'];
 
-// Helper to create a block
-const createBlock = (type: BlockType, content: string = '', meta: Block['meta'] = {}): Block => ({
-  id: uuid(),
-  type,
-  content,
-  meta,
-});
-
-// Initial documents - single template document
 const initialDocuments: Document[] = [
   {
     id: 'd1',
     title: '✨ Your Vision Board',
     projectId: 'p1',
     blocks: [
-      createBlock('h1', '✨ Your Vision Board'),
-      createBlock('text', 'This is your space to dream, plan, and manifest. Use this document to capture your vision, track your energy, and stay aligned with your North Star.'),
-      createBlock('divider'),
-      createBlock('h2', '🌟 What drives you?'),
-      createBlock('text', 'Write about your core motivations and what success means to you...'),
-      createBlock('h2', '⚡ Energy Audit'),
-      createBlock('text', 'What gives you energy? What drains it? List them here...'),
-      createBlock('h2', '🧲 Your Magnet Goals'),
-      createBlock('text', 'The goals that pull you forward effortlessly...'),
-      createBlock('divider'),
-      createBlock('callout', 'Remember: You are the architect of your reality. Every small action compounds into something magnificent.', { emoji: '⭐', bgColor: 'yellow' }),
+      createNewBlock('h1', '✨ Your Vision Board'),
+      createNewBlock('text', 'This is your space to dream, plan, and manifest. Use this document to capture your vision, track your energy, and stay aligned with your North Star.'),
+      createNewBlock('divider'),
+      createNewBlock('h2', '🌟 What drives you?'),
+      createNewBlock('text', 'Write about your core motivations and what success means to you...'),
+      createNewBlock('h2', '⚡ Energy Audit'),
+      createNewBlock('text', 'What gives you energy? What drains it? List them here...'),
+      createNewBlock('h2', '🧲 Your Magnet Goals'),
+      createNewBlock('text', 'The goals that pull you forward effortlessly...'),
+      createNewBlock('divider'),
+      createNewBlock('callout', 'Remember: You are the architect of your reality. Every small action compounds into something magnificent.', { emoji: '⭐', bgColor: 'yellow' }),
     ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -99,6 +152,7 @@ const initialBudgets: Budget[] = [
   { id: 'b-saving', name: 'Saving', limit: 1200 },
   { id: 'b-personal', name: 'Personal', limit: 900 },
 ];
+
 const initialMoneyEntries: MoneyEntry[] = [];
 const initialInvestmentPositions: InvestmentPosition[] = [];
 
@@ -127,26 +181,14 @@ const initialDatabaseSnapshot: DatabaseSnapshot = {
 };
 
 const cloneDatabaseSnapshot = (snapshot: DatabaseSnapshot): DatabaseSnapshot => ({
-  tasks: snapshot.tasks.map((task) => ({
-    ...task,
-    linkedProjects:
-      task.linkedProjects && task.linkedProjects.length > 0
-        ? [...task.linkedProjects]
-        : [task.project].filter(Boolean),
-    dependencyTaskIds: task.dependencyTaskIds ? [...task.dependencyTaskIds] : [],
-    tags: [...task.tags],
-    subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
-  })),
-  projects: snapshot.projects.map((project) => ({ ...project })),
-  projectCategories: snapshot.projectCategories.map((category) => ({ ...category })),
-  documents: snapshot.documents.map((document) => ({
+  tasks: (snapshot.tasks || []).map((task) => createNewTask(task)),
+  projects: (snapshot.projects || []).map((project) => createNewProject(project)),
+  projectCategories: (snapshot.projectCategories || []).map((category) => ({ ...category })),
+  documents: (snapshot.documents || []).map((document) => ({
     ...document,
-    blocks: document.blocks.map((block) => ({
-      ...block,
-      meta: block.meta ? { ...block.meta } : undefined,
-    })),
+    blocks: (document.blocks || []).map((block) => ({ ...block, meta: block.meta ? { ...block.meta } : undefined })),
   })),
-  tags: [...snapshot.tags],
+  tags: [...(snapshot.tags || [])],
   budgets: (snapshot.budgets || []).map((budget) => ({ ...budget })),
   moneyEntries: (snapshot.moneyEntries || []).map((entry) => ({ ...entry })),
   investmentPositions: (snapshot.investmentPositions || []).map((position) => ({ ...position })),
@@ -157,14 +199,14 @@ const createDefaultSnapshot = (): DatabaseSnapshot => cloneDatabaseSnapshot(init
 
 const isDatabaseSnapshotEmpty = (snapshot: DatabaseSnapshot): boolean => {
   return (
-    snapshot.tasks.length === 0 &&
-    snapshot.projects.length === 0 &&
-    snapshot.projectCategories.length === 0 &&
-    snapshot.documents.length === 0 &&
-    snapshot.tags.length === 0 &&
-    (snapshot.budgets?.length || 0) === 0 &&
-    (snapshot.moneyEntries?.length || 0) === 0 &&
-    (snapshot.investmentPositions?.length || 0) === 0
+    (snapshot.tasks || []).length === 0 &&
+    (snapshot.projects || []).length === 0 &&
+    (snapshot.projectCategories || []).length === 0 &&
+    (snapshot.documents || []).length === 0 &&
+    (snapshot.tags || []).length === 0 &&
+    (snapshot.budgets || []).length === 0 &&
+    (snapshot.moneyEntries || []).length === 0 &&
+    (snapshot.investmentPositions || []).length === 0
   );
 };
 
@@ -183,7 +225,7 @@ const persistSnapshot = async (snapshot: DatabaseSnapshot) => {
   }
 };
 
-const saveToDatabase = async (state: AppState) => {
+const saveToDatabase = (state: AppState) => {
   if (saveTimeout) clearTimeout(saveTimeout);
 
   saveTimeout = setTimeout(async () => {
@@ -199,7 +241,6 @@ const saveToDatabase = async (state: AppState) => {
         investmentPositions: state.investmentPositions,
         baseIncomeMonthly: state.baseIncomeMonthly,
       });
-      console.log('Data saved to database');
     } catch (error) {
       console.error('Failed to save to database:', error);
     }
@@ -210,9 +251,7 @@ export const loadFromDatabase = async (): Promise<DatabaseSnapshot | null> => {
   try {
     const response = await fetch('/api/db');
     const result = await response.json();
-
     if (response.ok && result.success && result.data) {
-      console.log('Data loaded from database');
       return result.data as DatabaseSnapshot;
     }
     return null;
@@ -221,6 +260,12 @@ export const loadFromDatabase = async (): Promise<DatabaseSnapshot | null> => {
     return null;
   }
 };
+
+const updateDocumentWordCount = (document: Document) => ({
+  ...document,
+  wordCount: calculateWordCount(document.blocks),
+  updatedAt: new Date().toISOString(),
+});
 
 export const useStore = create<AppState>((set, get) => ({
   currentView: 'dashboard',
@@ -248,19 +293,14 @@ export const useStore = create<AppState>((set, get) => ({
   theme: getInitialTheme(),
   soundEnabled: true,
   autoSetProjectForTask: null,
+  journeyStartDate: null,
 
-  // Actions
   setCurrentView: (view) => set({ currentView: view }),
   setSelectedProjectId: (id) => set({ selectedProjectId: id }),
   setSelectedDocumentId: (id) => set({ selectedDocumentId: id }),
 
   addTask: (task) => {
-    const linkedProjects =
-      task.linkedProjects && task.linkedProjects.length > 0
-        ? Array.from(new Set([task.project, ...task.linkedProjects]))
-        : [task.project];
-    const dependencyTaskIds = task.dependencyTaskIds ? [...new Set(task.dependencyTaskIds.filter(Boolean))] : [];
-    set((state) => ({ tasks: [...state.tasks, { ...task, linkedProjects, dependencyTaskIds }] }));
+    set((state) => ({ tasks: [...state.tasks, createNewTask(task)] }));
     saveToDatabase(get());
   },
 
@@ -294,6 +334,7 @@ export const useStore = create<AppState>((set, get) => ({
 
       return { tasks: updatedTasks };
     });
+
     if (completedProjects.length > 0 && typeof window !== 'undefined') {
       completedProjects.forEach((projectName) => {
         window.dispatchEvent(new CustomEvent('starrlign:project-complete', { detail: { projectName } }));
@@ -308,7 +349,6 @@ export const useStore = create<AppState>((set, get) => ({
       const projectTaskIds = state.tasks
         .filter((task) => task.project === projectName && !task.isArchived)
         .map((task) => task.id);
-
       const sourceIndex = projectTaskIds.indexOf(draggedTaskId);
       const targetIndex = projectTaskIds.indexOf(targetTaskId);
       if (sourceIndex === -1 || targetIndex === -1) return state;
@@ -316,16 +356,9 @@ export const useStore = create<AppState>((set, get) => ({
       const reorderedIds = [...projectTaskIds];
       const [moved] = reorderedIds.splice(sourceIndex, 1);
       reorderedIds.splice(targetIndex, 0, moved);
-
       const taskById = new Map(state.tasks.map((task) => [task.id, task]));
-      const reorderedProjectTasks = reorderedIds
-        .map((id) => taskById.get(id))
-        .filter((task): task is Task => Boolean(task));
-
-      const nonProjectTasks = state.tasks.filter(
-        (task) => !(task.project === projectName && !task.isArchived)
-      );
-
+      const reorderedProjectTasks = reorderedIds.map((id) => taskById.get(id)).filter((task): task is Task => Boolean(task));
+      const nonProjectTasks = state.tasks.filter((task) => !(task.project === projectName && !task.isArchived));
       return { tasks: [...nonProjectTasks, ...reorderedProjectTasks] };
     });
     saveToDatabase(get());
@@ -340,32 +373,22 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   archiveTask: (id) => {
-    set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === id ? { ...task, isArchived: true } : task
-      ),
-    }));
+    set((state) => ({ tasks: state.tasks.map((task) => (task.id === id ? { ...task, isArchived: true } : task)) }));
     saveToDatabase(get());
   },
 
   restoreTask: (id) => {
-    set((state) => ({
-      tasks: state.tasks.map((task) =>
-        task.id === id ? { ...task, isArchived: false } : task
-      ),
-    }));
+    set((state) => ({ tasks: state.tasks.map((task) => (task.id === id ? { ...task, isArchived: false } : task)) }));
     saveToDatabase(get());
   },
 
   toggleSubtask: (taskId, subtaskId) => {
     set((state) => ({
-      tasks: state.tasks.map((task) => {
-        if (task.id !== taskId) return task;
-        const updatedSubtasks = task.subtasks.map((subtask) =>
-          subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask
-        );
-        return { ...task, subtasks: updatedSubtasks };
-      }),
+      tasks: state.tasks.map((task) =>
+        task.id === taskId
+          ? { ...task, subtasks: task.subtasks.map((subtask) => (subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask)) }
+          : task
+      ),
     }));
     saveToDatabase(get());
   },
@@ -402,195 +425,137 @@ export const useStore = create<AppState>((set, get) => ({
   createTag: (tag) => {
     const normalizedTag = tag.trim();
     if (!normalizedTag) return;
-
-    set((state) => {
-      if (state.tags.includes(normalizedTag)) return state;
-      return { tags: [...state.tags, normalizedTag] };
-    });
+    set((state) => (state.tags.includes(normalizedTag) ? state : { tags: [...state.tags, normalizedTag] }));
     saveToDatabase(get());
   },
 
   deleteTag: (tag) => {
     set((state) => ({
       tags: state.tags.filter((existingTag) => existingTag !== tag),
-      tasks: state.tasks.map((task) => ({
-        ...task,
-        tags: task.tags.filter((taskTag) => taskTag !== tag),
-      })),
+      tasks: state.tasks.map((task) => ({ ...task, tags: task.tags.filter((taskTag) => taskTag !== tag) })),
     }));
     saveToDatabase(get());
   },
 
   setEditingTaskId: (id) => set({ editingTaskId: id }),
-
   setModalOpen: (open) => set({ isModalOpen: open }),
   setDetailMode: (mode) => set({ isDetailMode: mode }),
   setSearchQuery: (query) => set({ searchQuery: query }),
-
   setTagFilter: (tags) => set({ tagFilter: tags }),
-  toggleTagFilter: (tag) => {
-    set((state) => ({
-      tagFilter: state.tagFilter.includes(tag)
-        ? state.tagFilter.filter(t => t !== tag)
-        : [...state.tagFilter, tag]
-    }));
-  },
+  toggleTagFilter: (tag) => set((state) => ({ tagFilter: state.tagFilter.includes(tag) ? state.tagFilter.filter((t) => t !== tag) : [...state.tagFilter, tag] })),
   clearTagFilter: () => set({ tagFilter: [] }),
 
-  // Document actions
   createDocument: (projectId) => {
     const newDoc: Document = {
       id: uuid(),
       title: 'Untitled Document',
       projectId: projectId || null,
-      blocks: [createBlock('text', '')],
+      blocks: [createNewBlock('text', '')],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       wordCount: 0,
       isArchived: false,
     };
-    set((state) => ({
-      documents: [...state.documents, newDoc],
-      selectedDocumentId: newDoc.id,
-    }));
+    set((state) => ({ documents: [...state.documents, newDoc], selectedDocumentId: newDoc.id }));
     saveToDatabase(get());
   },
 
   updateDocument: (id, updates) => {
     set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, ...updates, updatedAt: new Date().toISOString() } : doc
-      ),
+      documents: state.documents.map((doc) => (doc.id === id ? updateDocumentWordCount({ ...doc, ...updates }) : doc)),
     }));
     saveToDatabase(get());
   },
 
   deleteDocument: (id) => {
-    set((state) => ({
-      documents: state.documents.filter(doc => doc.id !== id),
-      selectedDocumentId: state.selectedDocumentId === id ? null : state.selectedDocumentId,
-    }));
+    set((state) => ({ documents: state.documents.filter((doc) => doc.id !== id), selectedDocumentId: state.selectedDocumentId === id ? null : state.selectedDocumentId }));
     saveToDatabase(get());
   },
 
   archiveDocument: (id) => {
-    set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, isArchived: true, updatedAt: new Date().toISOString() } : doc
-      ),
-    }));
+    set((state) => ({ documents: state.documents.map((doc) => (doc.id === id ? { ...doc, isArchived: true, updatedAt: new Date().toISOString() } : doc)) }));
     saveToDatabase(get());
   },
 
   restoreDocument: (id) => {
-    set((state) => ({
-      documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, isArchived: false, updatedAt: new Date().toISOString() } : doc
-      ),
-    }));
+    set((state) => ({ documents: state.documents.map((doc) => (doc.id === id ? { ...doc, isArchived: false, updatedAt: new Date().toISOString() } : doc)) }));
     saveToDatabase(get());
   },
 
   duplicateDocument: (id) => {
     set((state) => {
-      const original = state.documents.find(d => d.id === id);
+      const original = state.documents.find((doc) => doc.id === id);
       if (!original) return state;
-      
       const newDoc: Document = {
         ...original,
         id: uuid(),
         title: `${original.title} (Copy)`,
-        blocks: original.blocks.map(b => ({ ...b, id: uuid() })),
+        blocks: original.blocks.map((block) => ({ ...block, id: uuid() })),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      return { 
-        documents: [...state.documents, newDoc],
-        selectedDocumentId: newDoc.id,
-      };
+      return { documents: [...state.documents, newDoc], selectedDocumentId: newDoc.id };
     });
     saveToDatabase(get());
   },
 
-  // Money actions
   addBudget: (budget) => {
     set((state) => ({ budgets: [...state.budgets, budget] }));
     saveToDatabase(get());
   },
-
   updateBudget: (id, updates) => {
-    set((state) => ({
-      budgets: state.budgets.map((budget) => (budget.id === id ? { ...budget, ...updates } : budget)),
-    }));
+    set((state) => ({ budgets: state.budgets.map((budget) => (budget.id === id ? { ...budget, ...updates } : budget)) }));
     saveToDatabase(get());
   },
-
   deleteBudget: (id) => {
     set((state) => ({ budgets: state.budgets.filter((budget) => budget.id !== id) }));
     saveToDatabase(get());
   },
-
   addMoneyEntry: (entry) => {
     set((state) => ({ moneyEntries: [...state.moneyEntries, entry] }));
     saveToDatabase(get());
   },
-
   updateMoneyEntry: (id, updates) => {
-    set((state) => ({
-      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry)),
-    }));
+    set((state) => ({ moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry)) }));
     saveToDatabase(get());
   },
-
   deleteMoneyEntry: (id) => {
     set((state) => ({ moneyEntries: state.moneyEntries.filter((entry) => entry.id !== id) }));
     saveToDatabase(get());
   },
-
   setMoneyEntryIncluded: (id, includedInBudget) => {
-    set((state) => ({
-      moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, includedInBudget } : entry)),
-    }));
+    set((state) => ({ moneyEntries: state.moneyEntries.map((entry) => (entry.id === id ? { ...entry, includedInBudget } : entry)) }));
     saveToDatabase(get());
   },
-
   setBaseIncomeMonthly: (amount) => {
     set({ baseIncomeMonthly: Math.max(0, amount || 0) });
     saveToDatabase(get());
   },
-
   addInvestmentPosition: (position) => {
     set((state) => ({ investmentPositions: [...state.investmentPositions, position] }));
     saveToDatabase(get());
   },
-
   updateInvestmentPosition: (id, updates) => {
-    set((state) => ({
-      investmentPositions: state.investmentPositions.map((position) =>
-        position.id === id ? { ...position, ...updates } : position
-      ),
-    }));
+    set((state) => ({ investmentPositions: state.investmentPositions.map((position) => (position.id === id ? { ...position, ...updates } : position)) }));
     saveToDatabase(get());
   },
-
   deleteInvestmentPosition: (id) => {
     set((state) => ({ investmentPositions: state.investmentPositions.filter((position) => position.id !== id) }));
     saveToDatabase(get());
   },
 
-  // Block actions
   addBlock: (docId, block, afterBlockId) => {
     set((state) => ({
       documents: state.documents.map((doc) => {
         if (doc.id !== docId) return doc;
-        
+        const blocks = [...doc.blocks];
         if (afterBlockId) {
-          const index = doc.blocks.findIndex(b => b.id === afterBlockId);
-          const newBlocks = [...doc.blocks];
-          newBlocks.splice(index + 1, 0, block);
-          return { ...doc, blocks: newBlocks, updatedAt: new Date().toISOString() };
+          const index = blocks.findIndex((candidate) => candidate.id === afterBlockId);
+          blocks.splice(index === -1 ? blocks.length : index + 1, 0, block);
+        } else {
+          blocks.push(block);
         }
-        return { ...doc, blocks: [...doc.blocks, block], updatedAt: new Date().toISOString() };
+        return updateDocumentWordCount({ ...doc, blocks });
       }),
     }));
     saveToDatabase(get());
@@ -598,30 +563,18 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateBlock: (docId, blockId, updates) => {
     set((state) => ({
-      documents: state.documents.map((doc) => {
-        if (doc.id !== docId) return doc;
-        return {
-          ...doc,
-          blocks: doc.blocks.map(b => 
-            b.id === blockId ? { ...b, ...updates } : b
-          ),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
+      documents: state.documents.map((doc) =>
+        doc.id === docId
+          ? updateDocumentWordCount({ ...doc, blocks: doc.blocks.map((block) => (block.id === blockId ? { ...block, ...updates } : block)) })
+          : doc
+      ),
     }));
     saveToDatabase(get());
   },
 
   deleteBlock: (docId, blockId) => {
     set((state) => ({
-      documents: state.documents.map((doc) => {
-        if (doc.id !== docId) return doc;
-        return {
-          ...doc,
-          blocks: doc.blocks.filter(b => b.id !== blockId),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
+      documents: state.documents.map((doc) => (doc.id === docId ? updateDocumentWordCount({ ...doc, blocks: doc.blocks.filter((block) => block.id !== blockId) }) : doc)),
     }));
     saveToDatabase(get());
   },
@@ -630,38 +583,27 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       documents: state.documents.map((doc) => {
         if (doc.id !== docId) return doc;
-        
         const blocks = [...doc.blocks];
-        const currentIndex = blocks.findIndex(b => b.id === blockId);
+        const currentIndex = blocks.findIndex((block) => block.id === blockId);
         if (currentIndex === -1) return doc;
-        
         const [block] = blocks.splice(currentIndex, 1);
         blocks.splice(newIndex, 0, block);
-        
-        return { ...doc, blocks, updatedAt: new Date().toISOString() };
+        return updateDocumentWordCount({ ...doc, blocks });
       }),
     }));
     saveToDatabase(get());
   },
 
-  // Project actions
   addProject: (project) => {
-    set((state) => ({ 
-      projects: [...state.projects, project] 
-    }));
+    set((state) => ({ projects: [...state.projects, createNewProject(project)] }));
     saveToDatabase(get());
   },
 
   updateProject: (id, updates) => {
     set((state) => {
       const currentProject = state.projects.find((project) => project.id === id);
-      const updatedProjects = state.projects.map((project) =>
-        project.id === id ? { ...project, ...updates } : project
-      );
-
-      if (!currentProject || !updates.name || updates.name === currentProject.name) {
-        return { projects: updatedProjects };
-      }
+      const updatedProjects = state.projects.map((project) => (project.id === id ? { ...project, ...updates } : project));
+      if (!currentProject || !updates.name || updates.name === currentProject.name) return { projects: updatedProjects };
 
       return {
         projects: updatedProjects,
@@ -670,9 +612,7 @@ export const useStore = create<AppState>((set, get) => ({
             ? {
                 ...task,
                 project: task.project === currentProject.name ? (updates.name as string) : task.project,
-                linkedProjects: (task.linkedProjects || [task.project]).map((projectName) =>
-                  projectName === currentProject.name ? (updates.name as string) : projectName
-                ),
+                linkedProjects: (task.linkedProjects || [task.project]).map((projectName) => (projectName === currentProject.name ? (updates.name as string) : projectName)),
               }
             : task
         ),
@@ -682,96 +622,54 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteProject: (id) => {
-    set((state) => ({
-      projects: state.projects.filter((project) => project.id !== id),
-      selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId,
-    }));
+    set((state) => ({ projects: state.projects.filter((project) => project.id !== id), selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId }));
     saveToDatabase(get());
   },
-
   archiveProject: (id) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === id ? { ...project, isArchived: true } : project
-      ),
-      selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId,
-    }));
+    set((state) => ({ projects: state.projects.map((project) => (project.id === id ? { ...project, isArchived: true } : project)), selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId }));
     saveToDatabase(get());
   },
-
   restoreProject: (id) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === id ? { ...project, isArchived: false } : project
-      ),
-    }));
+    set((state) => ({ projects: state.projects.map((project) => (project.id === id ? { ...project, isArchived: false } : project)) }));
     saveToDatabase(get());
   },
-
   reorderProjects: (startIndex, endIndex) => {
     set((state) => {
       const projects = [...state.projects];
       const [removed] = projects.splice(startIndex, 1);
       projects.splice(endIndex, 0, removed);
-      const reordered = projects.map((p, i) => ({ ...p, order: i }));
-      return { projects: reordered };
+      return { projects: projects.map((project, order) => ({ ...project, order })) };
     });
     saveToDatabase(get());
   },
 
-  // Modal setters
   setProjectModalOpen: (open) => set({ isProjectModalOpen: open }),
   setEditingProjectId: (id) => set({ editingProjectId: id }),
-  
-  // Settings
   setSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
   },
   setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
-  
-  // Search
   setSearchOpen: (open) => set({ isSearchOpen: open }),
-  
-  // Project category actions
+
   addProjectCategory: (name) => {
-    set((state) => ({
-      projectCategories: [...state.projectCategories, {
-        id: `cat-${uuid()}`,
-        name,
-        order: state.projectCategories.length,
-      }],
-    }));
+    set((state) => ({ projectCategories: [...state.projectCategories, { id: `cat-${uuid()}`, name, order: state.projectCategories.length }] }));
     saveToDatabase(get());
   },
-  
   updateProjectCategory: (id, name) => {
-    set((state) => ({
-      projectCategories: state.projectCategories.map(cat =>
-        cat.id === id ? { ...cat, name } : cat
-      ),
-    }));
+    set((state) => ({ projectCategories: state.projectCategories.map((category) => (category.id === id ? { ...category, name } : category)) }));
     saveToDatabase(get());
   },
-  
   deleteProjectCategory: (id) => {
     set((state) => ({
-      projectCategories: state.projectCategories.filter(cat => cat.id !== id),
-      projects: state.projects.map(p => 
-        p.category === id ? { ...p, category: null } : p
-      ),
+      projectCategories: state.projectCategories.filter((category) => category.id !== id),
+      projects: state.projects.map((project) => (project.category === id ? { ...project, category: null } : project)),
     }));
     saveToDatabase(get());
   },
-  
   setProjectFilter: (filter) => set({ projectFilter: filter }),
-  
-  // Auto-set project for new tasks
   setAutoSetProjectForTask: (projectId) => set({ autoSetProjectForTask: projectId }),
-  
-  // Journey start date
-  journeyStartDate: null,
   setJourneyStartDate: (date) => {
     set({ journeyStartDate: date });
     saveToDatabase(get());
@@ -782,10 +680,8 @@ export const useStore = create<AppState>((set, get) => ({
       clearTimeout(saveTimeout);
       saveTimeout = null;
     }
-
     const defaultSnapshot = createDefaultSnapshot();
     await persistSnapshot(defaultSnapshot);
-
     set({
       currentView: 'dashboard',
       selectedProjectId: null,
@@ -803,18 +699,32 @@ export const useStore = create<AppState>((set, get) => ({
       editingTaskId: null,
       isModalOpen: false,
       isDetailMode: false,
-      selectedProjectId: null,
-      selectedDocumentId: null,
       searchQuery: '',
       tagFilter: [],
       isProjectModalOpen: false,
       editingProjectId: null,
       autoSetProjectForTask: null,
+      journeyStartDate: null,
+    });
+  },
+
+  hydrateFromDatabase: async () => {
+    const loaded = await loadFromDatabase();
+    const snapshot = loaded && !isDatabaseSnapshotEmpty(loaded) ? cloneDatabaseSnapshot(loaded) : createDefaultSnapshot();
+    set({
+      tasks: snapshot.tasks,
+      projects: snapshot.projects,
+      projectCategories: snapshot.projectCategories,
+      documents: snapshot.documents,
+      tags: snapshot.tags,
+      budgets: snapshot.budgets,
+      moneyEntries: snapshot.moneyEntries,
+      investmentPositions: snapshot.investmentPositions,
+      baseIncomeMonthly: snapshot.baseIncomeMonthly,
     });
   },
 }));
 
-// Helper functions
 export const formatDate = (dateStr: string): string => {
   if (!dateStr || dateStr === 'idk yet' || dateStr === 'Ongoing') return dateStr;
   const date = new Date(dateStr);
@@ -831,7 +741,7 @@ export const formatDuration = (hours: number, minutes: number): string => {
 export const calculateWordCount = (blocks: Block[]): number => {
   return blocks.reduce((count, block) => {
     if (['text', 'h1', 'h2', 'h3', 'callout'].includes(block.type)) {
-      return count + block.content.split(/\s+/).filter(word => word.length > 0).length;
+      return count + block.content.split(/\s+/).filter((word) => word.length > 0).length;
     }
     return count;
   }, 0);
