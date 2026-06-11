@@ -59,20 +59,15 @@ export interface Block {
   type: BlockType;
   content: string;
   meta?: {
-    // For task blocks
     taskId?: string;
     priority?: 'high' | 'medium' | 'low';
     status?: 'todo' | 'doing' | 'review' | 'done';
-    // For progress blocks
     progressMode?: 'manual' | 'auto' | 'project';
     progressValue?: number;
     progressColor?: 'blue' | 'yellow' | 'red' | 'green';
-    // For link blocks
     url?: string;
     title?: string;
-    // For code blocks
     language?: string;
-    // For callout blocks
     emoji?: string;
     bgColor?: 'blue' | 'yellow' | 'red' | 'green';
   };
@@ -137,12 +132,10 @@ export interface AppState {
   isModalOpen: boolean;
   isDetailMode: boolean;
   searchQuery: string;
-  
-  // Settings state
+
   theme: 'light' | 'dark';
   soundEnabled: boolean;
-  
-  // Actions
+
   setCurrentView: (view: ViewType) => void;
   setSelectedProjectId: (id: string | null) => void;
   setSelectedDocumentId: (id: string | null) => void;
@@ -162,14 +155,12 @@ export interface AppState {
   setModalOpen: (open: boolean) => void;
   setDetailMode: (mode: boolean) => void;
   setSearchQuery: (query: string) => void;
-  
-  // Tag filter state
+
   tagFilter: string[];
   setTagFilter: (tags: string[]) => void;
   toggleTagFilter: (tag: string) => void;
   clearTagFilter: () => void;
-  
-  // Document actions
+
   createDocument: (projectId?: string) => void;
   updateDocument: (id: string, updates: Partial<Document>) => void;
   deleteDocument: (id: string) => void;
@@ -177,7 +168,6 @@ export interface AppState {
   restoreDocument: (id: string) => void;
   duplicateDocument: (id: string) => void;
 
-  // Money actions
   addBudget: (budget: Budget) => void;
   updateBudget: (id: string, updates: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
@@ -189,51 +179,43 @@ export interface AppState {
   addInvestmentPosition: (position: InvestmentPosition) => void;
   updateInvestmentPosition: (id: string, updates: Partial<InvestmentPosition>) => void;
   deleteInvestmentPosition: (id: string) => void;
-  
-  // Block actions
+
   addBlock: (docId: string, block: Block, afterBlockId?: string) => void;
   updateBlock: (docId: string, blockId: string, updates: Partial<Block>) => void;
   deleteBlock: (docId: string, blockId: string) => void;
   moveBlock: (docId: string, blockId: string, newIndex: number) => void;
-  
-  // Project actions
+
   addProject: (project: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   archiveProject: (id: string) => void;
   restoreProject: (id: string) => void;
   reorderProjects: (startIndex: number, endIndex: number) => void;
-  
-  // Project category actions
+
   addProjectCategory: (name: string) => void;
   updateProjectCategory: (id: string, name: string) => void;
   deleteProjectCategory: (id: string) => void;
   setProjectFilter: (filter: 'active' | 'archived' | 'all' | string) => void;
-  
-  // Modal states
+
   isProjectModalOpen: boolean;
   editingProjectId: string | null;
   setProjectModalOpen: (open: boolean) => void;
   setEditingProjectId: (id: string | null) => void;
-  
-  // Settings
+
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setSoundEnabled: (enabled: boolean) => void;
-  
-  // Search
+
   isSearchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
-  
-  // Auto-set project for new tasks
+
   autoSetProjectForTask: string | null;
   setAutoSetProjectForTask: (projectId: string | null) => void;
-  
-  // Journey start date for week tracking
+
   journeyStartDate: string | null;
   setJourneyStartDate: (date: string | null) => void;
-  
-  // Database sync
+
+  resetAllData: () => Promise<void>;
   hydrateFromDatabase: () => Promise<void>;
 }
