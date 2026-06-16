@@ -28,7 +28,6 @@ export interface Task {
   isArchived: boolean;
 }
 
-// Project types
 export interface Project {
   id: string;
   name: string;
@@ -44,14 +43,12 @@ export interface Project {
   category: string | null;
 }
 
-// Project Category type
 export interface ProjectCategory {
   id: string;
   name: string;
   order: number;
 }
 
-// Block types for documents
 export type BlockType = 'h1' | 'h2' | 'h3' | 'text' | 'task' | 'divider' | 'progress' | 'link' | 'comment' | 'code' | 'callout';
 
 export interface Block {
@@ -73,7 +70,6 @@ export interface Block {
   };
 }
 
-// Document types
 export interface Document {
   id: string;
   title: string;
@@ -91,6 +87,8 @@ export interface Budget {
   limit: number;
 }
 
+export type MoneyFrequency = 'one-time' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
+
 export interface MoneyEntry {
   id: string;
   title: string;
@@ -99,7 +97,17 @@ export interface MoneyEntry {
   category: 'work' | 'saving' | 'personal' | string;
   date: string;
   linkedTaskId?: string | null;
+  linkedProjectId?: string | null;
   includedInBudget: boolean;
+  notes?: string;
+  isRecurring?: boolean;
+  frequency?: MoneyFrequency;
+  annualInterestRate?: number;
+  principalBalance?: number;
+  dueDay?: number | null;
+  active?: boolean;
+  isPlannedVariable?: boolean;
+  isBalanceSnapshot?: boolean;
 }
 
 export interface InvestmentPosition {
@@ -110,10 +118,8 @@ export interface InvestmentPosition {
   currentPrice: number;
 }
 
-// View types
 export type ViewType = 'dashboard' | 'kanban' | 'documents' | 'projects' | 'archive' | 'money' | 'calendar';
 
-// App state
 export interface AppState {
   currentView: ViewType;
   selectedProjectId: string | null;
