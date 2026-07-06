@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { playAppSound, vibrateDevice } from '@/lib/sound';
+import { installAudioUnlock, playAppSound, vibrateDevice } from '@/lib/sound';
 import { toast } from 'sonner';
 
 type BurstType = 'task' | 'project' | null;
@@ -25,6 +25,10 @@ export default function DataProvider({ children }: { children: React.ReactNode }
   const [confetti, setConfetti] = useState<ReturnType<typeof createConfetti>>([]);
   const hydrateFromDatabase = useStore((state) => state.hydrateFromDatabase);
   const soundEnabled = useStore((state) => state.soundEnabled);
+
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
 
   useEffect(() => {
     const init = async () => {
