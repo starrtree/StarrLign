@@ -255,7 +255,7 @@ function createModelViewer() {
     'environment-image': 'neutral',
     exposure: '1.22',
     'shadow-intensity': '0.42',
-    orientation: '0deg 180deg 0deg',
+    orientation: '0deg 0deg 0deg',
     'camera-orbit': '0deg 66deg 112%',
     'field-of-view': '29deg',
     loading: 'eager',
