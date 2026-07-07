@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import IntroModelOverlay from './IntroModelOverlay';
 
 type VideoManifestItem = {
   name: string;
@@ -65,9 +66,6 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
         const data = await response.json();
         if (!cancelled && Array.isArray(data.videos)) {
           setManifestVideos(data.videos);
-          if (process.env.NODE_ENV !== 'production') {
-            console.info('[StarrLign intro videos]', data.videos.map((video: VideoManifestItem) => video.name));
-          }
         }
       } catch {
         if (!cancelled) setManifestVideos([]);
@@ -144,19 +142,16 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
         />
       )}
 
+      <IntroModelOverlay isDesktop={isDesktop} />
+
       {videoFailed && (
-        <div className="px-8 text-center text-white">
+        <div className="px-8 text-center text-white relative z-[7]">
           <div className="text-4xl font-black tracking-[4px] text-[var(--brand-yellow)]">STARRLIGN</div>
           <div className="mt-3 text-xs uppercase tracking-[2px] text-white/70">Tap continue to enter</div>
-          {detectedVideos.names.length > 0 && (
-            <div className="mt-3 text-[10px] text-white/40">
-              Found videos: {detectedVideos.names.join(', ')}
-            </div>
-          )}
         </div>
       )}
 
-      <button type="button" onClick={() => setShowIntro(false)} className="absolute bottom-6 right-6 px-3 py-1.5 rounded bg-white text-black text-xs">
+      <button type="button" onClick={() => setShowIntro(false)} className="absolute bottom-6 right-6 z-[8] px-3 py-1.5 rounded bg-white text-black text-xs">
         Continue
       </button>
     </div>
