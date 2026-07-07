@@ -1,6 +1,6 @@
 'use client';
 
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, createElement, useEffect, useState } from 'react';
 
 const STARRLIGN_MODEL_URL = 'https://res.cloudinary.com/r9c7da2l/image/upload/v1783385196/StarrLign_compressed_under_10mb_z5abhn.glb';
 const MODEL_VIEWER_SRC = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
@@ -9,7 +9,7 @@ let modelViewerScriptLoading: Promise<void> | null = null;
 
 function loadModelViewer() {
   if (typeof window === 'undefined') return Promise.resolve();
-  if (customElements.get('model-viewer')) return Promise.resolve();
+  if (window.customElements.get('model-viewer')) return Promise.resolve();
   if (modelViewerScriptLoading) return modelViewerScriptLoading;
 
   modelViewerScriptLoading = new Promise<void>((resolve, reject) => {
@@ -84,7 +84,6 @@ export default function IntroModelOverlay({ isDesktop }: IntroModelOverlayProps)
 
       {modelViewerReady ? (
         <div className="starrlign-model-viewer-shell">
-          {/** Use createElement-compatible custom element attributes through JSX fallback. */}
           {createModelViewer()}
         </div>
       ) : (
@@ -239,24 +238,21 @@ export default function IntroModelOverlay({ isDesktop }: IntroModelOverlayProps)
 }
 
 function createModelViewer() {
-  return (
-    // @ts-expect-error model-viewer is a custom element loaded at runtime.
-    <model-viewer
-      src={STARRLIGN_MODEL_URL}
-      alt="StarrLign app icon 3D model"
-      auto-rotate
-      rotation-per-second="34deg"
-      interaction-prompt="none"
-      disable-pan
-      disable-tap
-      disable-zoom
-      environment-image="neutral"
-      exposure="1.18"
-      shadow-intensity="0.45"
-      camera-orbit="0deg 68deg 115%"
-      field-of-view="30deg"
-      loading="eager"
-      reveal="auto"
-    />
-  );
+  return createElement('model-viewer', {
+    src: STARRLIGN_MODEL_URL,
+    alt: 'StarrLign app icon 3D model',
+    'auto-rotate': true,
+    'rotation-per-second': '34deg',
+    'interaction-prompt': 'none',
+    'disable-pan': true,
+    'disable-tap': true,
+    'disable-zoom': true,
+    'environment-image': 'neutral',
+    exposure: '1.18',
+    'shadow-intensity': '0.45',
+    'camera-orbit': '0deg 68deg 115%',
+    'field-of-view': '30deg',
+    loading: 'eager',
+    reveal: 'auto',
+  });
 }
