@@ -50,7 +50,8 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   const [videoFailed, setVideoFailed] = useState(false);
   const [manifestVideos, setManifestVideos] = useState<VideoManifestItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const introSoundStartedRef = useRef(false);
+  const introSoundAttemptedRef = useRef(false);
+  const introGestureRetryRef = useRef(false);
   const soundEnabled = useStore((state) => state.soundEnabled);
 
   useEffect(() => {
@@ -86,17 +87,21 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
     preloadAppSounds();
 
     const playIntroSound = () => {
-      if (introSoundStartedRef.current || !soundEnabled) return;
-      introSoundStartedRef.current = true;
+      if (!soundEnabled) return;
       playAppSound('introLoading', true);
     };
 
-    playIntroSound();
+    if (!introSoundAttemptedRef.current) {
+      introSoundAttemptedRef.current = true;
+      playIntroSound();
+    }
 
     // Mobile Safari and some desktop browsers block load-time audio until the first touch/click.
-    // This retries immediately on the first user gesture instead of waiting until later app clicks.
+    // Retry once on the first gesture so the named intro audio plays as early as the browser allows.
     const retryAfterGesture = () => {
-      if (!introSoundStartedRef.current) playIntroSound();
+      if (introGestureRetryRef.current) return;
+      introGestureRetryRef.current = true;
+      playIntroSound();
     };
     window.addEventListener('pointerdown', retryAfterGesture, { once: true, passive: true });
     window.addEventListener('touchstart', retryAfterGesture, { once: true, passive: true });
