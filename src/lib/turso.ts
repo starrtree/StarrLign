@@ -54,6 +54,14 @@ export function isDatabaseAvailable(): boolean {
   return turso !== null;
 }
 
+async function tryAddColumn(sql: string) {
+  try {
+    await turso?.execute(sql);
+  } catch {
+    // Column already exists on upgraded databases.
+  }
+}
+
 export async function initializeDatabase() {
   if (!turso) {
     console.log('Database not configured; persistence disabled');
@@ -78,26 +86,20 @@ export async function initializeDatabase() {
       progress INTEGER DEFAULT 0,
       notes TEXT,
       subtasks TEXT DEFAULT '[]',
+      completedAt TEXT,
+      previousStatusBeforeDone TEXT,
       isArchived INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  try {
-    await turso.execute(`ALTER TABLE tasks ADD COLUMN linkedProjects TEXT DEFAULT '[]'`);
-  } catch {
-    // Column already exists on upgraded databases.
-  }
-  try {
-    await turso.execute(`ALTER TABLE tasks ADD COLUMN dependencyTaskIds TEXT DEFAULT '[]'`);
-  } catch {}
-  try {
-    await turso.execute(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
-  } catch {}
-  try {
-    await turso.execute(`ALTER TABLE tasks ADD COLUMN endDate TEXT`);
-  } catch {}
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN linkedProjects TEXT DEFAULT '[]'`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN dependencyTaskIds TEXT DEFAULT '[]'`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN startDate TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN endDate TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN completedAt TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN previousStatusBeforeDone TEXT`);
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -117,12 +119,8 @@ export async function initializeDatabase() {
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  try {
-    await turso.execute(`ALTER TABLE projects ADD COLUMN startDate TEXT`);
-  } catch {}
-  try {
-    await turso.execute(`ALTER TABLE projects ADD COLUMN endDate TEXT`);
-  } catch {}
+  await tryAddColumn(`ALTER TABLE projects ADD COLUMN startDate TEXT`);
+  await tryAddColumn(`ALTER TABLE projects ADD COLUMN endDate TEXT`);
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS project_categories (
