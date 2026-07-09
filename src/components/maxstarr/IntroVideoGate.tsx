@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import IntroModelOverlay from './IntroModelOverlay';
+import { playAppSound, preloadAppSounds } from '@/lib/sound';
+import { useStore } from '@/lib/store';
 
 type VideoManifestItem = {
   name: string;
@@ -48,6 +50,8 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   const [videoFailed, setVideoFailed] = useState(false);
   const [manifestVideos, setManifestVideos] = useState<VideoManifestItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const introSoundStartedRef = useRef(false);
+  const soundEnabled = useStore((state) => state.soundEnabled);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 768px)');
@@ -77,6 +81,31 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    preloadAppSounds();
+
+    const playIntroSound = () => {
+      if (introSoundStartedRef.current || !soundEnabled) return;
+      introSoundStartedRef.current = true;
+      playAppSound('introLoading', true);
+    };
+
+    playIntroSound();
+
+    // Mobile Safari and some desktop browsers block load-time audio until the first touch/click.
+    // This retries immediately on the first user gesture instead of waiting until later app clicks.
+    const retryAfterGesture = () => {
+      if (!introSoundStartedRef.current) playIntroSound();
+    };
+    window.addEventListener('pointerdown', retryAfterGesture, { once: true, passive: true });
+    window.addEventListener('touchstart', retryAfterGesture, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', retryAfterGesture);
+      window.removeEventListener('touchstart', retryAfterGesture);
+    };
+  }, [soundEnabled]);
 
   const detectedVideos = useMemo(() => pickResponsiveVideos(manifestVideos), [manifestVideos]);
 
