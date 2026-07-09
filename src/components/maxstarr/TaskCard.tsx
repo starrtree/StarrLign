@@ -3,7 +3,7 @@
 import { Task } from '@/lib/types';
 import { useStore, formatDuration } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { Clock, Pencil, AlertTriangle, Sparkles, Link2 } from 'lucide-react';
+import { Clock, Pencil, AlertTriangle, Sparkles, Link2, Star, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -14,45 +14,46 @@ interface TaskCardProps {
   onDependencyAnchorClick?: (taskId: string) => void;
 }
 
-// Helper function to check if deadline is approaching (within 3 days) or overdue
+const FAVORITE_TAG = 'Favorite';
+
 function getDeadlineStatus(due: string | undefined): 'overdue' | 'approaching' | 'ok' {
   if (!due || due === 'idk yet' || due === 'Ongoing') return 'ok';
-  
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(due);
   dueDate.setHours(0, 0, 0, 0);
-  
+
   const diffTime = dueDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return 'overdue';
   if (diffDays <= 3) return 'approaching';
   return 'ok';
 }
 
 export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle', onDependencyAnchorClick }: TaskCardProps) {
-  const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode, tasks } = useStore();
+  const { updateTask, setEditingTaskId, setModalOpen, projects, setDetailMode, tasks, createTag, tags } = useStore();
   const [isCelebrating, setIsCelebrating] = useState(false);
-  
-  // Get project color
+
   const project = projects.find(p => p.name === task.project);
   const projectColor = project?.color || 'yellow';
-  
-  const colorMap: Record<string, { bg: string; text: string; textMuted: string }> = {
-    red: { bg: 'var(--brand-red)', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    blue: { bg: 'var(--brand-blue)', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    yellow: { bg: 'var(--brand-yellow)', text: 'black', textMuted: 'rgba(0,0,0,0.6)' },
-    gray: { bg: 'var(--gray-400)', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    green: { bg: '#22c55e', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    purple: { bg: '#a855f7', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    orange: { bg: '#f97316', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
-    pink: { bg: '#ec4899', text: 'white', textMuted: 'rgba(255,255,255,0.7)' },
+
+  const colorMap: Record<string, { bg: string; text: string; textMuted: string; glow: string }> = {
+    red: { bg: 'var(--brand-red)', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(237,28,36,0.82)' },
+    blue: { bg: 'var(--brand-blue)', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(0,82,180,0.82)' },
+    yellow: { bg: 'var(--brand-yellow)', text: 'black', textMuted: 'rgba(0,0,0,0.6)', glow: 'rgba(255,209,0,0.88)' },
+    gray: { bg: 'var(--gray-400)', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(156,163,175,0.82)' },
+    green: { bg: '#22c55e', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(34,197,94,0.82)' },
+    purple: { bg: '#a855f7', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(168,85,247,0.82)' },
+    orange: { bg: '#f97316', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(249,115,22,0.82)' },
+    pink: { bg: '#ec4899', text: 'white', textMuted: 'rgba(255,255,255,0.7)', glow: 'rgba(236,72,153,0.82)' },
   };
-  
+
   const colors = colorMap[projectColor] || colorMap.yellow;
   const deadlineStatus = getDeadlineStatus(task.due);
   const duration = formatDuration(task.durationHours, task.durationMinutes);
+  const isFavorite = task.tags?.includes(FAVORITE_TAG);
   const subtaskProgress = task.subtasks?.length
     ? Math.round((task.subtasks.filter((subtask) => subtask.done).length / task.subtasks.length) * 100)
     : 0;
@@ -62,64 +63,95 @@ export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle',
   const sameProjectDependencies = dependencyTasks.filter((dep) => dep.project === task.project).length;
   const externalDependencies = dependencyTasks.length - sameProjectDependencies;
 
+  const markDone = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateTask(task.id, {
+      status: 'done',
+      progress: 100,
+      completedAt: new Date().toISOString(),
+      previousStatusBeforeDone: task.status === 'done' ? task.previousStatusBeforeDone || 'todo' : task.status,
+    });
+    setIsCelebrating(true);
+    setTimeout(() => setIsCelebrating(false), 1400);
+    toast.success('Task completed');
+  };
+
+  const restoreTaskStatus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const restoreStatus = task.previousStatusBeforeDone || 'todo';
+    updateTask(task.id, {
+      status: restoreStatus,
+      completedAt: null,
+      previousStatusBeforeDone: null,
+      progress: task.subtasks?.length ? subtaskProgress : Math.min(task.progress || 0, 95),
+    });
+    toast.success(`Restored to ${restoreStatus.toUpperCase()}`);
+  };
+
   const handleQuickMove = (newStatus: Task['status'], e: React.MouseEvent) => {
     e.stopPropagation();
-    updateTask(task.id, { status: newStatus });
-    if (newStatus === 'done' && typeof window !== 'undefined') {
-      setIsCelebrating(true);
-      setTimeout(() => setIsCelebrating(false), 1400);
-      window.dispatchEvent(new Event('starrlign:task-complete'));
+    if (newStatus === 'done') {
+      markDone(e);
+      return;
     }
+    updateTask(task.id, { status: newStatus, completedAt: null, previousStatusBeforeDone: null });
     toast.success(`Task moved to ${newStatus.toUpperCase()}`);
   };
 
-  // Click on card → Opens detail view (expanded view)
   const handleCardClick = () => {
     setEditingTaskId(task.id);
-    setDetailMode(true); // true = detail view mode
+    setDetailMode(true);
     setModalOpen(true);
   };
 
-  // Click EDIT button → Opens edit form
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onEdit) {
       onEdit();
     } else {
       setEditingTaskId(task.id);
-      setDetailMode(false); // false = edit mode
+      setDetailMode(false);
       setModalOpen(true);
     }
+  };
+
+  const handleFavoriteToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!tags.includes(FAVORITE_TAG)) createTag(FAVORITE_TAG);
+    const nextTags = isFavorite
+      ? task.tags.filter((tag) => tag !== FAVORITE_TAG)
+      : Array.from(new Set([...(task.tags || []), FAVORITE_TAG]));
+    updateTask(task.id, { tags: nextTags });
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('starrlign:achievement'));
   };
 
   return (
     <div
       onClick={handleCardClick}
       className={cn(
-        "border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]",
-        task.status === 'done' && "opacity-70 saturate-50",
-        deadlineStatus === 'overdue' && "border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1",
-        deadlineStatus === 'approaching' && "border-[var(--brand-red)]",
-        isCelebrating && "card-gyrate"
+        'border-[2px] border-black rounded-lg p-3 cursor-pointer transition-all duration-200 relative shadow-[3px_3px_0_black] hover:shadow-[5px_5px_0_black] hover:translate-x-[-1px] hover:translate-y-[-1px]',
+        task.status === 'done' && 'opacity-70 saturate-50',
+        deadlineStatus === 'overdue' && 'border-[var(--brand-red)] ring-2 ring-[var(--brand-red)] ring-offset-1',
+        deadlineStatus === 'approaching' && 'border-[var(--brand-red)]',
+        isCelebrating && 'card-gyrate'
       )}
-      style={{ backgroundColor: colors.bg }}
+      style={{
+        backgroundColor: colors.bg,
+        boxShadow: isFavorite ? `0 0 0 3px ${colors.glow}, 0 0 28px 8px ${colors.glow}, 3px 3px 0 black` : undefined,
+      }}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('taskId', task.id);
         e.stopPropagation();
       }}
     >
-      {/* Deadline Warning */}
       {deadlineStatus !== 'ok' && task.status !== 'done' && (
         <div className="absolute -top-1 -right-1">
-          <AlertTriangle className={cn(
-            "w-4 h-4",
-            deadlineStatus === 'overdue' ? "text-[var(--brand-red)]" : "text-[var(--brand-yellow)]"
-          )} />
+          <AlertTriangle className={cn('w-4 h-4', deadlineStatus === 'overdue' ? 'text-[var(--brand-red)]' : 'text-[var(--brand-yellow)]')} />
         </div>
       )}
 
-      {task.status !== 'done' && (
+      {task.status !== 'done' && !isFavorite && (
         <div className="absolute top-2 right-2 flex items-center gap-0.5 pointer-events-none">
           <Sparkles className="w-3.5 h-3.5 text-[var(--brand-yellow)] task-sparkle" />
           <Sparkles className="w-2.5 h-2.5 text-white/90 task-sparkle" style={{ animationDelay: '220ms' }} />
@@ -134,23 +166,34 @@ export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle',
           onDependencyAnchorClick?.(task.id);
         }}
         className={cn(
-          "absolute top-2 left-2 w-5 h-5 rounded-full border-2 border-dashed border-black flex items-center justify-center transition-all",
-          dependencyAnchorState === 'selected' && "bg-[var(--brand-yellow)] scale-110",
-          dependencyAnchorState === 'linked' && "bg-[var(--brand-yellow)]/80",
-          dependencyAnchorState === 'idle' && "bg-white/35"
+          'absolute top-2 left-2 w-5 h-5 rounded-full border-2 border-dashed border-black flex items-center justify-center transition-all text-[10px]',
+          dependencyAnchorState === 'selected' && 'bg-[var(--brand-yellow)] scale-110',
+          dependencyAnchorState === 'linked' && 'bg-[var(--brand-yellow)]/80',
+          dependencyAnchorState === 'idle' && 'bg-white/35'
         )}
         title="Link task dependencies"
       >
-        ★
+        ⛓
       </button>
-      
-      {/* Priority Badge */}
+
+      <button
+        type="button"
+        onClick={handleFavoriteToggle}
+        className={cn(
+          'absolute top-2 left-8 w-5 h-5 rounded-full border-2 border-black flex items-center justify-center transition-all',
+          isFavorite ? 'bg-[var(--brand-yellow)] text-black scale-110' : 'bg-white/35 text-black/70 hover:bg-[var(--brand-yellow)]'
+        )}
+        title={isFavorite ? 'Remove visual highlight' : 'Favorite / highlight this task'}
+      >
+        <Star className={cn('w-3 h-3', isFavorite && 'fill-black')} />
+      </button>
+
       <span
         className={cn(
-          "inline-block text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black mb-2 uppercase",
-          task.priority === 'high' && "bg-[var(--brand-red)] text-white",
-          task.priority === 'medium' && "bg-[var(--brand-yellow)] text-black",
-          task.priority === 'low' && "bg-black/30 text-white"
+          'inline-block text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black mb-2 ml-12 uppercase',
+          task.priority === 'high' && 'bg-[var(--brand-red)] text-white',
+          task.priority === 'medium' && 'bg-[var(--brand-yellow)] text-black',
+          task.priority === 'low' && 'bg-black/30 text-white'
         )}
         style={{ fontFamily: 'var(--font-space-mono), monospace' }}
       >
@@ -158,88 +201,48 @@ export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle',
       </span>
 
       {task.status === 'done' && (
-        <span
-          className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border border-black bg-[var(--brand-green)] text-white"
-          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-        >
+        <span className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded border border-black bg-[var(--brand-green)] text-white" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
           COMPLETED
         </span>
       )}
 
-      {/* Title */}
-      <div 
-        className={cn(
-          "text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]",
-          task.status === 'done' && "line-through"
-        )}
+      <div
+        className={cn('text-sm font-semibold leading-snug mb-2 drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]', task.status === 'done' && 'line-through')}
         style={{ color: colors.text }}
       >
         {task.title}
       </div>
 
-      {/* Meta */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Duration */}
-        <div
-          className="text-[10px] font-bold flex items-center gap-1"
-          style={{ color: colors.textMuted, fontFamily: 'var(--font-space-mono), monospace' }}
-        >
+        <div className="text-[10px] font-bold flex items-center gap-1" style={{ color: colors.textMuted, fontFamily: 'var(--font-space-mono), monospace' }}>
           <Clock className="w-3 h-3" />
           {duration}
         </div>
 
-        {/* Tags */}
         {(task.linkedProjects?.length ? task.linkedProjects : [task.project]).slice(0, 2).map((projectName, i) => (
-          <span
-            key={`${projectName}-${i}`}
-            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/35 text-black font-semibold"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+          <span key={`${projectName}-${i}`} className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/35 text-black font-semibold" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             📁 {projectName}
           </span>
         ))}
         {(task.linkedProjects?.length || 1) > 2 && (
-          <span
-            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/20 text-white"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+          <span className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-white/20 text-white" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             +{(task.linkedProjects || [task.project]).length - 2}
           </span>
         )}
 
-        {/* Tags */}
-        {task.tags.map((tag, i) => (
-          <span
-            key={i}
-            className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-black/20 text-white"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+        {task.tags.filter((tag) => tag !== FAVORITE_TAG).map((tag, i) => (
+          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-[3px] border-[1.5px] border-black bg-black/20 text-white" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             {tag}
           </span>
         ))}
 
-        {/* Due Date */}
         {task.due && (
-          <span
-            className={cn(
-              "text-[10px] ml-auto flex items-center gap-1",
-              deadlineStatus === 'overdue' && "text-[var(--brand-red)] font-bold",
-              deadlineStatus === 'approaching' && "text-[var(--brand-yellow)] font-bold"
-            )}
-            style={{ 
-              color: deadlineStatus === 'ok' ? colors.textMuted : undefined,
-              fontFamily: 'var(--font-space-mono), monospace' 
-            }}
-          >
+          <span className={cn('text-[10px] ml-auto flex items-center gap-1', deadlineStatus === 'overdue' && 'text-[var(--brand-red)] font-bold', deadlineStatus === 'approaching' && 'text-[var(--brand-yellow)] font-bold')} style={{ color: deadlineStatus === 'ok' ? colors.textMuted : undefined, fontFamily: 'var(--font-space-mono), monospace' }}>
             {task.due === 'idk yet' ? 'idk yet' : task.due === 'Ongoing' ? '∞ Ongoing' : task.due}
           </span>
         )}
         {dependencyTasks.length > 0 && (
-          <span
-            className="text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded border border-black bg-black/20 text-white"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-            title={`${sameProjectDependencies} in this project, ${externalDependencies} outside`}
-          >
+          <span className="text-[10px] flex items-center gap-1 px-1.5 py-0.5 rounded border border-black bg-black/20 text-white" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title={`${sameProjectDependencies} in this project, ${externalDependencies} outside`}>
             <Link2 className="w-3 h-3" />
             {sameProjectDependencies}
             {externalDependencies > 0 ? ` +${externalDependencies}↗` : ''}
@@ -259,40 +262,28 @@ export default function TaskCard({ task, onEdit, dependencyAnchorState = 'idle',
         </div>
       )}
 
-      {/* Quick Actions */}
       <div className="flex gap-1.5 mt-2.5 pt-2 border-t border-black/20 flex-wrap">
         {task.status !== 'done' && (
-          <button
-            onClick={(e) => handleQuickMove('done', e)}
-            className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-green)] text-white hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+          <button onClick={markDone} className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-green)] text-white hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             ✓ DONE
           </button>
         )}
+        {task.status === 'done' && (
+          <button onClick={restoreTaskStatus} className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-yellow)] text-black hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            <RotateCcw className="w-3 h-3" /> UNDO
+          </button>
+        )}
         {task.status === 'todo' && (
-          <button
-            onClick={(e) => handleQuickMove('doing', e)}
-            className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-blue)] text-white hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+          <button onClick={(e) => handleQuickMove('doing', e)} className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-blue)] text-white hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             ⚡ START
           </button>
         )}
         {task.status === 'doing' && (
-          <button
-            onClick={(e) => handleQuickMove('review', e)}
-            className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-yellow)] text-black hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]"
-            style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-          >
+          <button onClick={(e) => handleQuickMove('review', e)} className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--brand-yellow)] text-black hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
             REVIEW
           </button>
         )}
-        <button
-          onClick={handleEditClick}
-          className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--shimmering-opal)] text-black hover:translate-x-[-1px] hover:translate-y-[-1px]"
-          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
-        >
+        <button onClick={handleEditClick} className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold tracking-wider rounded-[5px] border-[1.5px] border-black cursor-pointer transition-all duration-150 bg-[var(--shimmering-opal)] text-black hover:translate-x-[-1px] hover:translate-y-[-1px]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
           <Pencil className="w-3 h-3" /> EDIT
         </button>
       </div>
