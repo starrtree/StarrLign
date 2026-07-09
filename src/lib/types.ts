@@ -3,6 +3,7 @@ export interface Subtask {
   id: string;
   text: string;
   done: boolean;
+  completedAt?: string | null;
 }
 
 export interface Task {
@@ -25,6 +26,8 @@ export interface Task {
   timerStartedAt?: string | null;
   lastTimerStartAt?: string | null;
   lastTimerEndAt?: string | null;
+  completedAt?: string | null;
+  previousStatusBeforeDone?: 'todo' | 'doing' | 'review' | null;
   isArchived: boolean;
 }
 
