@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { Search, Plus, Sparkles, Moon, Sun } from 'lucide-react';
+import { Search, Plus, Sparkles, Moon, Sun, CheckCircle2 } from 'lucide-react';
 
 const viewTitles: Record<string, string> = {
   dashboard: 'FOCUS DASHBOARD',
@@ -12,6 +12,14 @@ const viewTitles: Record<string, string> = {
   calendar: 'CALENDAR',
   archive: 'NEST',
 };
+
+function isToday(value?: string | null) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+}
 
 export default function Topbar() {
   const {
@@ -27,8 +35,16 @@ export default function Topbar() {
     setSearchOpen,
     theme,
     setTheme,
+    tasks,
   } = useStore();
   const isDark = theme === 'dark';
+
+  const completedTasksToday = tasks.filter((task) => !task.isArchived && task.status === 'done' && isToday(task.completedAt)).length;
+  const completedSubtasksToday = tasks.reduce(
+    (count, task) => count + (task.subtasks || []).filter((subtask) => subtask.done && isToday(subtask.completedAt)).length,
+    0
+  );
+  const dailyWins = completedTasksToday + completedSubtasksToday;
 
   const handleNewTask = () => {
     setEditingTaskId(null);
@@ -57,15 +73,21 @@ export default function Topbar() {
   const showNewTaskButton = currentView !== 'documents' || !selectedDocumentId;
 
   return (
-    <header className="bg-[var(--brand-blue)] border-b-[3px] border-black px-4 md:px-6 h-[60px] flex items-center gap-3 md:gap-4 sticky top-0 z-[90] shadow-[0_4px_0_black]">
+    <header className="bg-[var(--brand-blue)] border-b-[3px] border-black px-3 md:px-6 h-[60px] flex items-center gap-2 md:gap-4 sticky top-0 z-[90] shadow-[0_4px_0_black]">
       <div className="w-10 lg:hidden" />
 
       <h1
-        className="text-base md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 overflow-x-auto whitespace-nowrap no-scrollbar"
+        className="text-base md:text-[22px] tracking-wide text-[var(--brand-yellow)] flex-1 overflow-x-auto whitespace-nowrap no-scrollbar min-w-0"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
       </h1>
+
+      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border-[2px] border-black bg-white/95 text-black text-[9px] md:text-[10px] font-bold tracking-[1px] shadow-[2px_2px_0_black] whitespace-nowrap" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title={`${completedTasksToday} tasks + ${completedSubtasksToday} subtasks completed today`}>
+        <CheckCircle2 className="w-3 h-3 text-[var(--brand-green)]" />
+        <span>{dailyWins}</span>
+        <span className="hidden sm:inline">DONE TODAY</span>
+      </div>
 
       <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full border-[2px] border-black bg-[var(--brand-yellow)] text-black text-[9px] font-bold tracking-[1.5px] shadow-[2px_2px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }} title="If you can see this, the latest feature drop is deployed.">
         <Sparkles className="w-3 h-3" /> V14 LIVE
@@ -79,6 +101,15 @@ export default function Topbar() {
       >
         {isDark ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
         {isDark ? 'LIGHT' : 'DARK'}
+      </button>
+
+      <button
+        onClick={() => setSearchOpen(true)}
+        className="sm:hidden inline-flex items-center justify-center w-10 h-10 border-[2px] border-black rounded-lg bg-[var(--brand-yellow)] text-black shadow-[3px_3px_0_black] flex-shrink-0"
+        title="Search"
+        aria-label="Open search"
+      >
+        <Search className="w-4 h-4" />
       </button>
 
       <button
