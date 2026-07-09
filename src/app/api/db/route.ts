@@ -56,6 +56,8 @@ export async function GET() {
       progress: Number(row.progress ?? 0),
       notes: row.notes ? String(row.notes) : '',
       subtasks: parseJsonField<Task['subtasks']>(row.subtasks, []),
+      completedAt: row.completedAt ? String(row.completedAt) : null,
+      previousStatusBeforeDone: row.previousStatusBeforeDone ? (String(row.previousStatusBeforeDone) as Task['previousStatusBeforeDone']) : null,
       isArchived: Boolean(row.isArchived),
     }));
 
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
     batchStatements.push({ sql: 'DELETE FROM tasks', args: [] });
     for (const task of (tasks || []) as Task[]) {
       batchStatements.push({
-        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, completedAt, previousStatusBeforeDone, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         args: [
           task.id,
           task.title,
@@ -157,6 +159,8 @@ export async function POST(request: NextRequest) {
           task.progress || 0,
           task.notes || null,
           JSON.stringify(task.subtasks || []),
+          task.completedAt || null,
+          task.previousStatusBeforeDone || null,
           task.isArchived ? 1 : 0,
         ],
       });
