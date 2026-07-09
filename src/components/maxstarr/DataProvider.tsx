@@ -1,11 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { installAudioUnlock, playAppSound, vibrateDevice } from '@/lib/sound';
+import { installAudioUnlock, installButtonSoundEffects, playAppSound, preloadAppSounds, vibrateDevice } from '@/lib/sound';
 import { toast } from 'sonner';
+import { Task } from '@/lib/types';
 
 type BurstType = 'task' | 'project' | null;
+type TaskCompleteDetail = {
+  taskId?: string;
+  title?: string;
+  previousStatus?: Exclude<Task['status'], 'done'>;
+};
 
 function createConfetti(count: number) {
   return Array.from({ length: count }).map((_, index) => ({
@@ -25,9 +31,13 @@ export default function DataProvider({ children }: { children: React.ReactNode }
   const [confetti, setConfetti] = useState<ReturnType<typeof createConfetti>>([]);
   const hydrateFromDatabase = useStore((state) => state.hydrateFromDatabase);
   const soundEnabled = useStore((state) => state.soundEnabled);
+  const updateTask = useStore((state) => state.updateTask);
+  const lastTaskCompleteAtRef = useRef(0);
 
   useEffect(() => {
     installAudioUnlock();
+    installButtonSoundEffects(() => useStore.getState().soundEnabled);
+    preloadAppSounds();
   }, []);
 
   useEffect(() => {
@@ -45,12 +55,32 @@ export default function DataProvider({ children }: { children: React.ReactNode }
   }, [hydrateFromDatabase]);
 
   useEffect(() => {
-    const onTaskComplete = () => {
+    const onTaskComplete = (event: Event) => {
+      const now = Date.now();
+      const detail = (event as CustomEvent<TaskCompleteDetail>).detail;
+
+      if (!detail?.taskId && now - lastTaskCompleteAtRef.current < 350) return;
+      lastTaskCompleteAtRef.current = now;
+
       setBurst('task');
       setConfetti(createConfetti(18));
       playAppSound('taskComplete', soundEnabled);
       vibrateDevice([22, 30, 22]);
-      toast.success('Task complete! ✨');
+      toast.success(detail?.title ? `Completed: ${detail.title}` : 'Task complete', {
+        action: detail?.taskId
+          ? {
+              label: 'UNDO',
+              onClick: () => {
+                updateTask(detail.taskId as string, {
+                  status: detail.previousStatus || 'todo',
+                  completedAt: null,
+                  previousStatusBeforeDone: null,
+                });
+                toast.success('Completion undone');
+              },
+            }
+          : undefined,
+      });
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('starrlign:card-complete'));
       }
@@ -118,7 +148,7 @@ export default function DataProvider({ children }: { children: React.ReactNode }
       window.removeEventListener('starrlign:money-delete', onMoneyDelete);
       window.removeEventListener('starrlign:achievement', onAchievement);
     };
-  }, [soundEnabled]);
+  }, [soundEnabled, updateTask]);
 
   if (isLoading) {
     return (
