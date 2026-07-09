@@ -1,4 +1,5 @@
 export type AppSound =
+  | 'introLoading'
   | 'taskComplete'
   | 'subtaskToggle'
   | 'subtaskComplete'
@@ -7,6 +8,11 @@ export type AppSound =
   | 'taskSwipe'
   | 'uiOpen'
   | 'uiClose'
+  | 'buttonClick'
+  | 'taskStart'
+  | 'taskEdit'
+  | 'searchOpen'
+  | 'undo'
   | 'moneyAdd'
   | 'moneyDelete'
   | 'achievement';
@@ -15,14 +21,20 @@ const DEFAULT_VOLUME = 0.68;
 const EXTENSIONS = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'webm'];
 
 const SOUND_BASE_NAMES: Record<AppSound, string[]> = {
-  taskComplete: ['task-complete', 'task_complete', 'task-completed', 'complete-task', 'complete', 'success'],
+  introLoading: ['intro-loading', 'intro_loading', 'loading-intro', 'loading_intro', 'intro load', 'intro-load', 'intro', 'loading', 'loadup', 'load-up', 'startup', 'starrlign-loading', 'starrlign-intro'],
+  taskComplete: ['task-complete', 'task_complete', 'task-completed', 'complete-task', 'complete', 'success', 'done'],
   subtaskToggle: ['subtask-toggle', 'subtask_toggle', 'check-subtask', 'button-click', 'click', 'tap'],
   subtaskComplete: ['subtask-complete', 'subtask_complete', 'subtask-completed', 'check-subtask', 'check', 'success'],
   projectComplete: ['project-complete', 'project_complete', 'project-completed', 'achievement', 'success', 'shine'],
   cardComplete: ['cashchaching', 'cash-chaching', 'chaching', 'caching', 'money-complete', 'money'],
   taskSwipe: ['task-swipe', 'task-swipe-whoosh', 'swipe', 'whoosh', 'swoosh'],
-  uiOpen: ['ui-open', 'open', 'modal-open', 'button-open', 'button-click', 'click', 'tap', 'pop'],
-  uiClose: ['ui-close', 'close', 'modal-close', 'button-close', 'button-click', 'click', 'tap'],
+  uiOpen: ['ui-open', 'open', 'modal-open', 'button-open', 'pop'],
+  uiClose: ['ui-close', 'close', 'modal-close', 'button-close'],
+  buttonClick: ['button-click', 'button_click', 'click', 'tap', 'press', 'select'],
+  taskStart: ['task-start', 'task_start', 'start-task', 'start', 'begin', 'activate'],
+  taskEdit: ['task-edit', 'task_edit', 'edit-task', 'edit', 'pencil'],
+  searchOpen: ['search-open', 'search_open', 'open-search', 'search', 'magnify'],
+  undo: ['undo', 'restore', 'back', 'reverse', 'rewind'],
   moneyAdd: ['money-add', 'money_add', 'add-money', 'cashchaching', 'chaching', 'money'],
   moneyDelete: ['money-delete', 'money_delete', 'delete-money', 'delete', 'trash'],
   achievement: ['achievement', 'achievement-shine', 'shine', 'project-complete', 'sparkle'],
@@ -46,9 +58,10 @@ const audioCache = new Map<string, HTMLAudioElement>();
 type SoundManifestItem = { name: string; url: string };
 
 function getVolume(sound: AppSound) {
+  if (sound === 'introLoading') return 0.72;
   if (sound === 'projectComplete' || sound === 'cardComplete' || sound === 'achievement') return 0.78;
-  if (sound === 'uiOpen' || sound === 'uiClose') return 0.64;
-  if (sound === 'moneyDelete' || sound === 'taskSwipe') return 0.66;
+  if (sound === 'uiOpen' || sound === 'uiClose' || sound === 'buttonClick' || sound === 'searchOpen' || sound === 'taskEdit') return 0.64;
+  if (sound === 'moneyDelete' || sound === 'taskSwipe' || sound === 'undo') return 0.66;
   return DEFAULT_VOLUME;
 }
 
@@ -61,6 +74,8 @@ function rankManifestMatch(sound: AppSound, item: SoundManifestItem) {
   const hints = SOUND_BASE_NAMES[sound].map(normalizeName);
   const exactIndex = hints.findIndex((hint) => normalized === hint);
   if (exactIndex !== -1) return 1000 - exactIndex;
+  const startsIndex = hints.findIndex((hint) => normalized.startsWith(hint) || hint.startsWith(normalized));
+  if (startsIndex !== -1) return 720 - startsIndex;
   const includesIndex = hints.findIndex((hint) => normalized.includes(hint) || hint.includes(normalized));
   if (includesIndex !== -1) return 500 - includesIndex;
   return 0;
@@ -75,13 +90,25 @@ async function loadSoundManifest() {
     .then((data) => {
       const sounds = Array.isArray(data.sounds) ? (data.sounds as SoundManifestItem[]) : [];
       const nextResolved: Partial<Record<AppSound, string>> = {};
+      const usedUrls = new Set<string>();
 
       (Object.keys(SOUND_BASE_NAMES) as AppSound[]).forEach((sound) => {
         const best = sounds
           .map((item) => ({ item, score: rankManifestMatch(sound, item) }))
           .filter((match) => match.score > 0)
           .sort((a, b) => b.score - a.score)[0];
-        if (best) nextResolved[sound] = best.item.url;
+        if (best) {
+          nextResolved[sound] = best.item.url;
+          usedUrls.add(best.item.url);
+        }
+      });
+
+      // If there are extra named files that do not perfectly match, assign them to common actions
+      // so one generic click sound does not dominate the whole app.
+      const unused = sounds.filter((item) => !usedUrls.has(item.url));
+      const fallbackSlots: AppSound[] = ['buttonClick', 'uiOpen', 'uiClose', 'taskStart', 'taskEdit', 'searchOpen', 'undo', 'taskSwipe'];
+      fallbackSlots.forEach((slot, index) => {
+        if (!nextResolved[slot] && unused[index]) nextResolved[slot] = unused[index].url;
       });
 
       resolvedSoundFiles = nextResolved;
@@ -133,6 +160,7 @@ function unlockAudio() {
 
 export function preloadAppSounds() {
   if (typeof window === 'undefined') return;
+  void loadSoundManifest();
   (Object.keys(SOUND_BASE_NAMES) as AppSound[]).forEach((sound) => {
     const src = getCandidates(sound)[0];
     if (!src || audioCache.has(src)) return;
@@ -155,6 +183,18 @@ export function installAudioUnlock() {
   window.addEventListener('keydown', unlock, { once: true });
 }
 
+function getButtonSound(interactive: HTMLElement): AppSound {
+  const text = (interactive.textContent || interactive.getAttribute('aria-label') || interactive.getAttribute('title') || '').toLowerCase();
+  const label = interactive.getAttribute('aria-label')?.toLowerCase() || '';
+
+  if (text.includes('search') || label.includes('search')) return 'searchOpen';
+  if (text.includes('start') || text.includes('begin')) return 'taskStart';
+  if (text.includes('edit') || text.includes('pencil')) return 'taskEdit';
+  if (text.includes('undo') || text.includes('restore')) return 'undo';
+  if (text.includes('delete') || text.includes('trash') || text.includes('close') || text.includes('cancel')) return 'uiClose';
+  return 'buttonClick';
+}
+
 export function installButtonSoundEffects(getEnabled: () => boolean) {
   if (typeof window === 'undefined' || buttonSoundsAttached) return;
   buttonSoundsAttached = true;
@@ -169,11 +209,7 @@ export function installButtonSoundEffects(getEnabled: () => boolean) {
 
       const text = (interactive.textContent || interactive.getAttribute('aria-label') || interactive.getAttribute('title') || '').toLowerCase();
       if (text.includes('done') || text.includes('complete')) return;
-      if (text.includes('delete') || text.includes('trash') || text.includes('close') || text.includes('cancel')) {
-        playAppSound('uiClose', true);
-        return;
-      }
-      playAppSound('uiOpen', true);
+      playAppSound(getButtonSound(interactive), true);
     },
     { capture: true, passive: true }
   );
