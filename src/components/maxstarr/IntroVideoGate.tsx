@@ -10,6 +10,8 @@ type VideoManifestItem = {
   url: string;
 };
 
+const INTRO_LOADING_AUDIO_SRC = '/api/sounds/by-name/introLoading';
+
 const LEGACY_MOBILE_VIDEOS = [
   '/videos/starrLign_loading_screen_Mobile.mp4',
   '/videos/starrLign_loading_screen(Mobile).mp4',
@@ -50,19 +52,40 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   const [videoFailed, setVideoFailed] = useState(false);
   const [manifestVideos, setManifestVideos] = useState<VideoManifestItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const introSoundAttemptedRef = useRef(false);
   const introSoundPlayedRef = useRef(false);
   const appOpenFallbackRef = useRef(false);
   const finishTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const soundEnabled = useStore((state) => state.soundEnabled);
 
+  const tryPlayIntroAudioElement = useCallback(async () => {
+    if (!soundEnabled || introSoundPlayedRef.current || !audioRef.current) return false;
+
+    try {
+      const audio = audioRef.current;
+      audio.volume = 0.72;
+      audio.currentTime = 0;
+      await audio.play();
+      introSoundAttemptedRef.current = true;
+      introSoundPlayedRef.current = true;
+      return true;
+    } catch {
+      introSoundAttemptedRef.current = true;
+      return false;
+    }
+  }, [soundEnabled]);
+
   const tryPlayIntroSound = useCallback(async () => {
     if (!soundEnabled || introSoundPlayedRef.current) return false;
-    introSoundAttemptedRef.current = true;
+
+    const htmlAudioPlayed = await tryPlayIntroAudioElement();
+    if (htmlAudioPlayed) return true;
+
     const played = await playAppSoundWhenReady('introLoading', true);
     if (played) introSoundPlayedRef.current = true;
     return played;
-  }, [soundEnabled]);
+  }, [soundEnabled, tryPlayIntroAudioElement]);
 
   const finishIntro = useCallback(() => {
     if (finishTimerRef.current) {
@@ -107,6 +130,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
 
   useEffect(() => {
     preloadAppSounds();
+    audioRef.current?.load();
 
     const retryAfterGesture = () => {
       if (introSoundPlayedRef.current) return;
@@ -182,6 +206,8 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden" style={{ zIndex: 999 }}>
+      <audio ref={audioRef} src={INTRO_LOADING_AUDIO_SRC} preload="auto" playsInline />
+
       {!videoFailed && videoSrc && (
         <video
           ref={videoRef}
@@ -195,6 +221,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
             void videoRef.current?.play().catch(() => undefined);
           }}
           onPlaying={handleVideoPlaying}
+          onPlay={handleVideoPlaying}
           onEnded={finishIntro}
           onError={handleVideoError}
         />
