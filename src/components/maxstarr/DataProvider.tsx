@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { installAudioUnlock, installButtonSoundEffects, playAppSound, preloadAppSounds, vibrateDevice } from '@/lib/sound';
+import { installHapticFeedback } from '@/lib/haptics';
 import { toast } from 'sonner';
 import { Task } from '@/lib/types';
 
@@ -37,6 +38,7 @@ export default function DataProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     installAudioUnlock();
     installButtonSoundEffects(() => useStore.getState().soundEnabled);
+    installHapticFeedback();
     preloadAppSounds();
   }, []);
 
