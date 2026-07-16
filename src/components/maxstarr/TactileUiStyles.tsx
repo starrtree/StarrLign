@@ -5,6 +5,11 @@ export default function TactileUiStyles() {
     <style jsx global>{`
       :root {
         --starr-tactile-ring: 0 0 0 3px rgba(255, 209, 0, 0.72), 0 0 0 6px rgba(0, 82, 180, 0.28);
+        --yellow-card-outline: rgba(0, 0, 0, 0.92);
+      }
+
+      .dark {
+        --yellow-card-outline: rgba(255, 255, 255, 0.96);
       }
 
       button,
@@ -60,6 +65,20 @@ export default function TactileUiStyles() {
         box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.18), 0 0 18px rgba(255, 209, 0, 0.28);
         pointer-events: none;
         animation: starrTactilePulse 260ms ease-out forwards;
+      }
+
+      .yellow-card-contrast:hover,
+      .yellow-card-contrast:hover :is(h1, h2, h3, h4, p, span, div, button, label, small) {
+        text-shadow:
+          1px 0 0 var(--yellow-card-outline),
+          -1px 0 0 var(--yellow-card-outline),
+          0 1px 0 var(--yellow-card-outline),
+          0 -1px 0 var(--yellow-card-outline),
+          0 0 5px var(--yellow-card-outline);
+      }
+
+      .yellow-card-contrast:hover :is(svg, path) {
+        filter: drop-shadow(0 0 2px var(--yellow-card-outline));
       }
 
       input:focus,
