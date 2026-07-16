@@ -53,6 +53,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   const introSoundAttemptedRef = useRef(false);
   const introSoundPlayedRef = useRef(false);
   const appOpenFallbackRef = useRef(false);
+  const finishTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const soundEnabled = useStore((state) => state.soundEnabled);
 
   const tryPlayIntroSound = useCallback(async () => {
@@ -64,6 +65,10 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   }, [soundEnabled]);
 
   const finishIntro = useCallback(() => {
+    if (finishTimerRef.current) {
+      window.clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = null;
+    }
     setShowIntro(false);
     if (!introSoundPlayedRef.current && !appOpenFallbackRef.current && soundEnabled) {
       appOpenFallbackRef.current = true;
@@ -117,6 +122,17 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
     };
   }, [tryPlayIntroSound]);
 
+  useEffect(() => {
+    if (!showIntro) return;
+    finishTimerRef.current = window.setTimeout(() => finishIntro(), 12500);
+    return () => {
+      if (finishTimerRef.current) {
+        window.clearTimeout(finishTimerRef.current);
+        finishTimerRef.current = null;
+      }
+    };
+  }, [finishIntro, showIntro]);
+
   const detectedVideos = useMemo(() => pickResponsiveVideos(manifestVideos), [manifestVideos]);
 
   const sources = useMemo(() => {
@@ -158,7 +174,8 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
 
   const handleVideoPlaying = () => {
     if (!introSoundAttemptedRef.current) void tryPlayIntroSound();
-    window.setTimeout(() => finishIntro(), 12000);
+    if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
+    finishTimerRef.current = window.setTimeout(() => finishIntro(), 12000);
   };
 
   if (!showIntro) return <>{children}</>;
