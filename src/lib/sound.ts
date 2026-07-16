@@ -103,8 +103,6 @@ async function loadSoundManifest() {
         }
       });
 
-      // If there are extra named files that do not perfectly match, assign them to common actions
-      // so one generic click sound does not dominate the whole app.
       const unused = sounds.filter((item) => !usedUrls.has(item.url));
       const fallbackSlots: AppSound[] = ['buttonClick', 'uiOpen', 'uiClose', 'taskStart', 'taskEdit', 'searchOpen', 'undo', 'taskSwipe'];
       fallbackSlots.forEach((slot, index) => {
@@ -170,6 +168,27 @@ export function preloadAppSounds() {
     audio.load();
     audioCache.set(src, audio);
   });
+}
+
+export async function playAppSoundWhenReady(sound: AppSound, enabled: boolean) {
+  if (!enabled || typeof window === 'undefined') return false;
+  await loadSoundManifest();
+  const candidates = getCandidates(sound);
+
+  for (const src of candidates) {
+    try {
+      const audio = getCachedAudio(src, sound);
+      audio.volume = getVolume(sound);
+      audio.currentTime = 0;
+      await audio.play();
+      return true;
+    } catch {
+      audioCache.delete(src);
+    }
+  }
+
+  warnSoundFailure(sound, candidates);
+  return false;
 }
 
 export function installAudioUnlock() {
