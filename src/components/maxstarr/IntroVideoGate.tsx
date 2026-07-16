@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IntroModelOverlay from './IntroModelOverlay';
-import { playAppSound, preloadAppSounds } from '@/lib/sound';
+import { playAppSoundWhenReady, preloadAppSounds } from '@/lib/sound';
 import { useStore } from '@/lib/store';
 
 type VideoManifestItem = {
@@ -51,8 +51,25 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   const [manifestVideos, setManifestVideos] = useState<VideoManifestItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const introSoundAttemptedRef = useRef(false);
-  const introGestureRetryRef = useRef(false);
+  const introSoundPlayedRef = useRef(false);
+  const appOpenFallbackRef = useRef(false);
   const soundEnabled = useStore((state) => state.soundEnabled);
+
+  const tryPlayIntroSound = useCallback(async () => {
+    if (!soundEnabled || introSoundPlayedRef.current) return false;
+    introSoundAttemptedRef.current = true;
+    const played = await playAppSoundWhenReady('introLoading', true);
+    if (played) introSoundPlayedRef.current = true;
+    return played;
+  }, [soundEnabled]);
+
+  const finishIntro = useCallback(() => {
+    setShowIntro(false);
+    if (!introSoundPlayedRef.current && !appOpenFallbackRef.current && soundEnabled) {
+      appOpenFallbackRef.current = true;
+      void tryPlayIntroSound();
+    }
+  }, [soundEnabled, tryPlayIntroSound]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 768px)');
@@ -86,23 +103,11 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   useEffect(() => {
     preloadAppSounds();
 
-    const playIntroSound = () => {
-      if (!soundEnabled) return;
-      playAppSound('introLoading', true);
-    };
-
-    if (!introSoundAttemptedRef.current) {
-      introSoundAttemptedRef.current = true;
-      playIntroSound();
-    }
-
-    // Mobile Safari and some desktop browsers block load-time audio until the first touch/click.
-    // Retry once on the first gesture so the named intro audio plays as early as the browser allows.
     const retryAfterGesture = () => {
-      if (introGestureRetryRef.current) return;
-      introGestureRetryRef.current = true;
-      playIntroSound();
+      if (introSoundPlayedRef.current) return;
+      void tryPlayIntroSound();
     };
+
     window.addEventListener('pointerdown', retryAfterGesture, { once: true, passive: true });
     window.addEventListener('touchstart', retryAfterGesture, { once: true, passive: true });
 
@@ -110,7 +115,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
       window.removeEventListener('pointerdown', retryAfterGesture);
       window.removeEventListener('touchstart', retryAfterGesture);
     };
-  }, [soundEnabled]);
+  }, [tryPlayIntroSound]);
 
   const detectedVideos = useMemo(() => pickResponsiveVideos(manifestVideos), [manifestVideos]);
 
@@ -148,10 +153,12 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
       return;
     }
     setVideoFailed(true);
+    if (!introSoundAttemptedRef.current) void tryPlayIntroSound();
   };
 
   const handleVideoPlaying = () => {
-    window.setTimeout(() => setShowIntro(false), 12000);
+    if (!introSoundAttemptedRef.current) void tryPlayIntroSound();
+    window.setTimeout(() => finishIntro(), 12000);
   };
 
   if (!showIntro) return <>{children}</>;
@@ -171,7 +178,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
             void videoRef.current?.play().catch(() => undefined);
           }}
           onPlaying={handleVideoPlaying}
-          onEnded={() => setShowIntro(false)}
+          onEnded={finishIntro}
           onError={handleVideoError}
         />
       )}
@@ -185,7 +192,7 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
         </div>
       )}
 
-      <button type="button" onClick={() => setShowIntro(false)} className="absolute bottom-6 right-6 z-[8] px-3 py-1.5 rounded bg-white text-black text-xs">
+      <button type="button" onClick={finishIntro} className="absolute bottom-6 right-6 z-[8] px-3 py-1.5 rounded bg-white text-black text-xs">
         Continue
       </button>
     </div>
