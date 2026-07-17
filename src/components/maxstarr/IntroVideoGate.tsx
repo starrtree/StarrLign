@@ -47,28 +47,36 @@ function pickResponsiveVideos(videos: VideoManifestItem[]) {
 
 export default function IntroVideoGate({ children }: { children: React.ReactNode }) {
   const [showIntro, setShowIntro] = useState(true);
+  const [introStarted, setIntroStarted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [sourceIndex, setSourceIndex] = useState(0);
   const [videoFailed, setVideoFailed] = useState(false);
   const [manifestVideos, setManifestVideos] = useState<VideoManifestItem[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const introStartedRef = useRef(false);
   const introSoundAttemptedRef = useRef(false);
   const introSoundPlayedRef = useRef(false);
   const appOpenFallbackRef = useRef(false);
   const finishTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const soundEnabled = useStore((state) => state.soundEnabled);
 
-  const tryPlayIntroAudioElement = useCallback(async () => {
+  const tryPlayIntroAudioElement = useCallback(() => {
     if (!soundEnabled || introSoundPlayedRef.current || !audioRef.current) return false;
 
     try {
       const audio = audioRef.current;
       audio.volume = 0.72;
       audio.currentTime = 0;
-      await audio.play();
+      const playPromise = audio.play();
       introSoundAttemptedRef.current = true;
-      introSoundPlayedRef.current = true;
+      void playPromise
+        .then(() => {
+          introSoundPlayedRef.current = true;
+        })
+        .catch(() => {
+          introSoundPlayedRef.current = false;
+        });
       return true;
     } catch {
       introSoundAttemptedRef.current = true;
@@ -76,28 +84,59 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
     }
   }, [soundEnabled]);
 
-  const tryPlayIntroSound = useCallback(async () => {
+  const tryFallbackIntroSound = useCallback(async () => {
     if (!soundEnabled || introSoundPlayedRef.current) return false;
-
-    const htmlAudioPlayed = await tryPlayIntroAudioElement();
-    if (htmlAudioPlayed) return true;
-
     const played = await playAppSoundWhenReady('introLoading', true);
     if (played) introSoundPlayedRef.current = true;
     return played;
-  }, [soundEnabled, tryPlayIntroAudioElement]);
+  }, [soundEnabled]);
 
   const finishIntro = useCallback(() => {
     if (finishTimerRef.current) {
       window.clearTimeout(finishTimerRef.current);
       finishTimerRef.current = null;
     }
-    setShowIntro(false);
-    if (!introSoundPlayedRef.current && !appOpenFallbackRef.current && soundEnabled) {
-      appOpenFallbackRef.current = true;
-      void tryPlayIntroSound();
+
+    const shouldFallbackAfterOpen = !introSoundPlayedRef.current && !appOpenFallbackRef.current && soundEnabled;
+
+    if (introSoundPlayedRef.current && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
-  }, [soundEnabled, tryPlayIntroSound]);
+
+    setShowIntro(false);
+
+    if (shouldFallbackAfterOpen) {
+      appOpenFallbackRef.current = true;
+      void tryFallbackIntroSound();
+    }
+  }, [soundEnabled, tryFallbackIntroSound]);
+
+  const beginIntro = useCallback(() => {
+    if (introStartedRef.current) return;
+    introStartedRef.current = true;
+    setIntroStarted(true);
+    setVideoFailed(false);
+
+    const audioPlayStarted = tryPlayIntroAudioElement();
+    if (!audioPlayStarted) void tryFallbackIntroSound();
+
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.currentTime = 0;
+      void video.play().catch(() => {
+        setVideoFailed(true);
+        if (!introSoundAttemptedRef.current) void tryFallbackIntroSound();
+      });
+    }
+
+    if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
+    finishTimerRef.current = window.setTimeout(() => finishIntro(), 12500);
+  }, [finishIntro, tryFallbackIntroSound, tryPlayIntroAudioElement]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 768px)');
@@ -131,31 +170,13 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   useEffect(() => {
     preloadAppSounds();
     audioRef.current?.load();
-
-    const retryAfterGesture = () => {
-      if (introSoundPlayedRef.current) return;
-      void tryPlayIntroSound();
-    };
-
-    window.addEventListener('pointerdown', retryAfterGesture, { once: true, passive: true });
-    window.addEventListener('touchstart', retryAfterGesture, { once: true, passive: true });
-
-    return () => {
-      window.removeEventListener('pointerdown', retryAfterGesture);
-      window.removeEventListener('touchstart', retryAfterGesture);
-    };
-  }, [tryPlayIntroSound]);
+  }, []);
 
   useEffect(() => {
-    if (!showIntro) return;
-    finishTimerRef.current = window.setTimeout(() => finishIntro(), 12500);
     return () => {
-      if (finishTimerRef.current) {
-        window.clearTimeout(finishTimerRef.current);
-        finishTimerRef.current = null;
-      }
+      if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
     };
-  }, [finishIntro, showIntro]);
+  }, []);
 
   const detectedVideos = useMemo(() => pickResponsiveVideos(manifestVideos), [manifestVideos]);
 
@@ -166,20 +187,6 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
   }, [detectedVideos.desktop, detectedVideos.mobile, isDesktop]);
 
   const videoSrc = sources[sourceIndex] || sources[0];
-
-  useEffect(() => {
-    if (!showIntro || videoFailed) return;
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = true;
-    video.setAttribute('muted', '');
-    video.setAttribute('playsinline', '');
-    video.setAttribute('webkit-playsinline', '');
-    video.setAttribute('autoplay', '');
-    video.load();
-    void video.play().catch(() => undefined);
-  }, [showIntro, videoSrc, videoFailed]);
 
   useEffect(() => {
     setSourceIndex(0);
@@ -193,11 +200,11 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
       return;
     }
     setVideoFailed(true);
-    if (!introSoundAttemptedRef.current) void tryPlayIntroSound();
+    if (!introSoundAttemptedRef.current) void tryFallbackIntroSound();
   };
 
   const handleVideoPlaying = () => {
-    if (!introSoundAttemptedRef.current) void tryPlayIntroSound();
+    if (!introStartedRef.current) return;
     if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
     finishTimerRef.current = window.setTimeout(() => finishIntro(), 12000);
   };
@@ -212,14 +219,11 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
         <video
           ref={videoRef}
           key={videoSrc}
-          className="w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${introStarted ? 'opacity-100' : 'opacity-0'}`}
           src={videoSrc}
           muted
           playsInline
           preload="auto"
-          onCanPlay={() => {
-            void videoRef.current?.play().catch(() => undefined);
-          }}
           onPlaying={handleVideoPlaying}
           onPlay={handleVideoPlaying}
           onEnded={finishIntro}
@@ -227,18 +231,46 @@ export default function IntroVideoGate({ children }: { children: React.ReactNode
         />
       )}
 
-      <IntroModelOverlay isDesktop={isDesktop} />
+      {introStarted && <IntroModelOverlay isDesktop={isDesktop} />}
 
-      {videoFailed && (
+      {!introStarted && (
+        <button
+          type="button"
+          onPointerDown={beginIntro}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') beginIntro();
+          }}
+          className="absolute inset-0 z-[10] flex flex-col items-center justify-center bg-[radial-gradient(circle_at_center,rgba(255,209,0,0.20)_0%,rgba(0,82,180,0.20)_34%,rgba(0,0,0,0.96)_72%)] text-center px-6 cursor-pointer"
+          aria-label="Tap to start StarrLign intro"
+        >
+          <div className="relative w-[min(58vw,260px)] h-[min(58vw,260px)] mb-6 rounded-full border border-white/15 bg-black/30 shadow-[0_0_60px_rgba(255,209,0,0.25)] flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-5 rounded-full bg-[radial-gradient(circle,rgba(255,209,0,0.45),rgba(237,28,36,0.12)_42%,transparent_72%)] blur-xl animate-pulse" />
+            <div className="relative text-[78px] md:text-[108px] leading-none text-[var(--brand-yellow)] drop-shadow-[0_0_22px_rgba(255,209,0,0.85)]">★</div>
+          </div>
+          <div className="text-[42px] md:text-[72px] leading-none tracking-[4px] text-[var(--brand-yellow)] drop-shadow-[0_0_20px_rgba(255,209,0,0.5)]" style={{ fontFamily: 'var(--font-display)' }}>
+            STARRLIGN
+          </div>
+          <div className="mt-3 text-xs md:text-sm uppercase tracking-[3px] text-white/75" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            Tap to align
+          </div>
+          <div className="mt-6 px-5 py-2.5 rounded-full border-[2px] border-black bg-[var(--brand-yellow)] text-black text-xs font-black tracking-[2px] shadow-[4px_4px_0_black]" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+            START INTRO + SOUND
+          </div>
+        </button>
+      )}
+
+      {introStarted && videoFailed && (
         <div className="px-8 text-center text-white relative z-[7]">
           <div className="text-4xl font-black tracking-[4px] text-[var(--brand-yellow)]">STARRLIGN</div>
-          <div className="mt-3 text-xs uppercase tracking-[2px] text-white/70">Tap continue to enter</div>
+          <div className="mt-3 text-xs uppercase tracking-[2px] text-white/70">Video blocked. Continue to enter.</div>
         </div>
       )}
 
-      <button type="button" onClick={finishIntro} className="absolute bottom-6 right-6 z-[8] px-3 py-1.5 rounded bg-white text-black text-xs">
-        Continue
-      </button>
+      {introStarted && (
+        <button type="button" onClick={finishIntro} className="absolute bottom-6 right-6 z-[8] px-3 py-1.5 rounded bg-white text-black text-xs">
+          Continue
+        </button>
+      )}
     </div>
   );
 }
