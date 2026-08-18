@@ -76,6 +76,9 @@ export async function initializeDatabase() {
       linkedProjects TEXT DEFAULT '[]',
       dependencyTaskIds TEXT DEFAULT '[]',
       priority TEXT DEFAULT 'medium',
+      scheduleType TEXT,
+      eventStart TEXT,
+      eventEnd TEXT,
       status TEXT DEFAULT 'todo',
       startDate TEXT,
       endDate TEXT,
@@ -100,6 +103,9 @@ export async function initializeDatabase() {
   await tryAddColumn(`ALTER TABLE tasks ADD COLUMN endDate TEXT`);
   await tryAddColumn(`ALTER TABLE tasks ADD COLUMN completedAt TEXT`);
   await tryAddColumn(`ALTER TABLE tasks ADD COLUMN previousStatusBeforeDone TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN scheduleType TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN eventStart TEXT`);
+  await tryAddColumn(`ALTER TABLE tasks ADD COLUMN eventEnd TEXT`);
 
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS projects (

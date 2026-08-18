@@ -298,19 +298,19 @@ export default function TaskDetailModal() {
           )}
 
           {/* Notes */}
-          {task.notes && (
-            <div className="mb-5">
+          <div className="mb-5">
               <span className={cn("text-xs font-bold mb-2 block", textColor)} style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
-                NOTES
+                NOTES <span className={cn('font-medium', textColorMuted)}>(editable)</span>
               </span>
-              <div 
-                className={cn("p-3 rounded-lg border-[2px] border-black/30", projectColor === 'yellow' ? "bg-black/10" : "bg-black/20")}
+              <textarea
+                value={task.notes || ''}
+                onChange={(event) => updateTask(task.id, { notes: event.target.value })}
+                onClick={(event) => event.stopPropagation()}
+                placeholder="Add context, notes, or links..."
+                className={cn("min-h-24 w-full resize-y p-3 rounded-lg border-[2px] border-black/30 outline-none focus:border-black", projectColor === 'yellow' ? "bg-black/10 text-black placeholder:text-black/50" : "bg-black/20 text-white placeholder:text-white/50")}
                 style={{ fontFamily: 'var(--font-space-mono), monospace', fontSize: '12px' }}
-              >
-                {task.notes}
-              </div>
-            </div>
-          )}
+              />
+          </div>
 
           {/* Subtasks */}
           {task.subtasks && task.subtasks.length > 0 && (

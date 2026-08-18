@@ -39,7 +39,7 @@ export default function TaskModal() {
 
   return (
     <TaskModalContent
-      editingTask={editingTask}
+      editingTask={editingTask ?? null}
       currentProjectName={currentProjectName}
       onClose={() => {
         setModalOpen(false);
@@ -117,6 +117,9 @@ function TaskModalContent({
         linkedProjects: editingTask.linkedProjects?.length ? [...editingTask.linkedProjects] : [editingTask.project],
         dependencyTaskIds: editingTask.dependencyTaskIds?.length ? [...editingTask.dependencyTaskIds] : [],
         priority: editingTask.priority,
+        scheduleType: editingTask.scheduleType || (editingTask.startDate && editingTask.endDate ? 'event' : 'deadline'),
+        eventStart: editingTask.eventStart || editingTask.startDate || '',
+        eventEnd: editingTask.eventEnd || editingTask.endDate || '',
         status: editingTask.status,
         startDate: editingTask.startDate,
         durationHours: editingTask.durationHours,
@@ -132,7 +135,10 @@ function TaskModalContent({
       project: currentProjectName,
       linkedProjects: [currentProjectName],
       dependencyTaskIds: [],
-      priority: 'medium',
+      priority: '',
+      scheduleType: 'deadline',
+      eventStart: '',
+      eventEnd: '',
       status: 'todo',
       startDate: '',
       durationHours: 0,
@@ -163,6 +169,27 @@ function TaskModalContent({
   const handleSave = () => {
     if (!formData.title?.trim()) {
       toast.error('Task name is required');
+      return;
+    }
+    if (!formData.project) {
+      toast.error('Project is required');
+      return;
+    }
+    if (!formData.priority) {
+      toast.error('Priority is required');
+      return;
+    }
+    if (formData.scheduleType === 'event') {
+      if (!formData.eventStart || !formData.eventEnd) {
+        toast.error('Event start and end dates are required');
+        return;
+      }
+      if (formData.eventEnd < formData.eventStart) {
+        toast.error('Event end date must be after the start date');
+        return;
+      }
+    } else if (!formData.due || formData.due === 'idk yet' || formData.due === 'Ongoing') {
+      toast.error('Deadline is required');
       return;
     }
 
@@ -329,7 +356,7 @@ function TaskModalContent({
                 className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5"
                 style={{ fontFamily: 'var(--font-space-mono), monospace' }}
               >
-                Project
+                Project *
               </label>
               <select
                 value={formData.project || ''}
@@ -352,10 +379,10 @@ function TaskModalContent({
                 className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5"
                 style={{ fontFamily: 'var(--font-space-mono), monospace' }}
               >
-                Priority
+                Priority *
               </label>
               <select
-                value={formData.priority || 'medium'}
+                value={formData.priority || ''}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as Task['priority'] })}
                 className="w-full px-3 py-2 text-xs border-[2px] border-[#3a3a3a] rounded-lg bg-[#2a2a2a] text-white outline-none cursor-pointer appearance-none transition-all duration-150"
                 style={{ 
@@ -365,6 +392,7 @@ function TaskModalContent({
                   backgroundPosition: 'right 12px center',
                 }}
               >
+                <option value="" disabled>Select priority</option>
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
                 <option value="low">Low</option>
@@ -441,6 +469,17 @@ function TaskModalContent({
             </details>
           </div>
 
+          {/* Required schedule */}
+          <div className="mb-4 rounded-lg border-2 border-[#3a3a3a] bg-[#222] p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <label className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>Schedule *</label>
+              <label className="flex cursor-pointer items-center gap-2 text-[10px] font-bold text-white/80">
+                <input type="checkbox" checked={formData.scheduleType === 'event'} onChange={(e) => setFormData({ ...formData, scheduleType: e.target.checked ? 'event' : 'deadline', due: e.target.checked ? '' : formData.due, eventStart: e.target.checked ? formData.eventStart : '', eventEnd: e.target.checked ? formData.eventEnd : '' })} /> Event / Date Range
+              </label>
+            </div>
+            {formData.scheduleType === 'event' ? <div className="grid grid-cols-2 gap-3"><label className="text-[10px] text-white/60">START DATE *<input type="date" value={formData.eventStart || ''} onChange={(e) => setFormData({ ...formData, eventStart: e.target.value, startDate: e.target.value })} className="mt-1 w-full rounded-lg border-2 border-[#3a3a3a] bg-[#2a2a2a] px-3 py-2 text-xs text-white" /></label><label className="text-[10px] text-white/60">END DATE *<input type="date" value={formData.eventEnd || ''} onChange={(e) => setFormData({ ...formData, eventEnd: e.target.value, endDate: e.target.value })} className="mt-1 w-full rounded-lg border-2 border-[#3a3a3a] bg-[#2a2a2a] px-3 py-2 text-xs text-white" /></label></div> : <label className="text-[10px] text-white/60">DEADLINE / DUE DATE *<input type="date" value={formData.due || ''} onChange={(e) => setFormData({ ...formData, due: e.target.value })} className="mt-1 w-full rounded-lg border-2 border-[#3a3a3a] bg-[#2a2a2a] px-3 py-2 text-xs text-white" /></label>}
+          </div>
+
           {/* Duration Spinners */}
           <div className="mb-4">
             <label
@@ -514,7 +553,7 @@ function TaskModalContent({
           </div>
 
           {/* Timeframe */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="hidden grid-cols-2 gap-3 mb-4">
             <div>
               <label className="text-[10px] tracking-wider text-white/60 uppercase block mb-1.5" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
                 Start Date
@@ -540,7 +579,7 @@ function TaskModalContent({
           </div>
 
           {/* Due Date */}
-          <div className="mb-4">
+          <div className="hidden mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <label
                 className="text-[10px] tracking-wider text-white/60 uppercase block"

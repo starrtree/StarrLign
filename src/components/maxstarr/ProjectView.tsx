@@ -27,6 +27,7 @@ export default function ProjectView() {
     setSelectedDocumentId,
     createDocument,
     setModalOpen,
+    openNewTaskModal,
     setAutoSetProjectForTask,
     projectCategories,
     projectFilter,
@@ -182,12 +183,7 @@ export default function ProjectView() {
     pink: '#ec4899',
   };
 
-  const handleNewTaskFromProject = () => {
-    if (selectedProjectId) {
-      setAutoSetProjectForTask(selectedProjectId);
-    }
-    setModalOpen(true);
-  };
+  const handleNewTaskFromProject = () => openNewTaskModal(selectedProjectId);
 
   // Category header component
   const CategoryHeader = ({ name, count, categoryId }: { name: string; count: number; categoryId: string }) => (

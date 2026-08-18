@@ -11,7 +11,10 @@ export interface Task {
   title: string;
   project: string;
   linkedProjects: string[];
-  priority: 'high' | 'medium' | 'low';
+  priority: 'high' | 'medium' | 'low' | '';
+  scheduleType?: 'deadline' | 'event';
+  eventStart?: string;
+  eventEnd?: string;
   status: 'todo' | 'doing' | 'review' | 'done';
   startDate: string;
   endDate: string;
@@ -163,6 +166,9 @@ export interface AppState {
   setEditingTaskId: (id: string | null) => void;
   setModalOpen: (open: boolean) => void;
   setDetailMode: (mode: boolean) => void;
+  openNewTaskModal: (projectId?: string | null) => void;
+  openTaskDetails: (id: string) => void;
+  openTaskEditor: (id: string) => void;
   setSearchQuery: (query: string) => void;
 
   tagFilter: string[];

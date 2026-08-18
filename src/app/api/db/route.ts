@@ -45,7 +45,10 @@ export async function GET() {
       project: row.project ? String(row.project) : '',
       linkedProjects: parseJsonField<string[]>(row.linkedProjects, row.project ? [String(row.project)] : []),
       dependencyTaskIds: parseJsonField<string[]>(row.dependencyTaskIds, []),
-      priority: ((row.priority as Task['priority']) || 'medium'),
+      priority: row.priority ? (String(row.priority) as Task['priority']) : '',
+      scheduleType: row.scheduleType ? (String(row.scheduleType) as Task['scheduleType']) : undefined,
+      eventStart: row.eventStart ? String(row.eventStart) : '',
+      eventEnd: row.eventEnd ? String(row.eventEnd) : '',
       status: ((row.status as Task['status']) || 'todo'),
       startDate: row.startDate ? String(row.startDate) : '',
       endDate: row.endDate ? String(row.endDate) : '',
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
     batchStatements.push({ sql: 'DELETE FROM tasks', args: [] });
     for (const task of (tasks || []) as Task[]) {
       batchStatements.push({
-        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, completedAt, previousStatusBeforeDone, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO tasks (id, title, project, linkedProjects, dependencyTaskIds, priority, scheduleType, eventStart, eventEnd, status, startDate, endDate, due, durationHours, durationMinutes, tags, progress, notes, subtasks, completedAt, previousStatusBeforeDone, isArchived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         args: [
           task.id,
           task.title,
@@ -149,6 +152,9 @@ export async function POST(request: NextRequest) {
           JSON.stringify(task.linkedProjects || [task.project].filter(Boolean)),
           JSON.stringify(task.dependencyTaskIds || []),
           task.priority,
+          task.scheduleType || null,
+          task.eventStart || null,
+          task.eventEnd || null,
           task.status,
           task.startDate || null,
           task.endDate || null,
