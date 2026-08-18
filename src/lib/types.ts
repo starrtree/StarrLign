@@ -125,6 +125,7 @@ export interface InvestmentPosition {
 }
 
 export type ViewType = 'dashboard' | 'kanban' | 'documents' | 'projects' | 'archive' | 'money' | 'calendar';
+export type DashboardBackground = 'neutral' | 'mint' | 'powder-blue' | 'lavender';
 
 export interface AppState {
   currentView: ViewType;
@@ -146,6 +147,7 @@ export interface AppState {
   searchQuery: string;
 
   theme: 'light' | 'dark';
+  dashboardBackground: DashboardBackground;
   soundEnabled: boolean;
 
   setCurrentView: (view: ViewType) => void;
@@ -220,6 +222,7 @@ export interface AppState {
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
+  setDashboardBackground: (background: DashboardBackground) => void;
   setSoundEnabled: (enabled: boolean) => void;
 
   isSearchOpen: boolean;

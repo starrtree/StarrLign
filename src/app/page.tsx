@@ -19,8 +19,15 @@ import DataProvider from '@/components/maxstarr/DataProvider';
 import IntroVideoGate from '@/components/maxstarr/IntroVideoGate';
 import { useStore } from '@/lib/store';
 
+const DASHBOARD_BACKGROUND_COLORS = {
+  neutral: '#f5f5f0',
+  mint: '#b9e3cc',
+  'powder-blue': '#b8d0e3',
+  lavender: '#dfb4df',
+} as const;
+
 function AppContent() {
-  const { currentView, isDetailMode } = useStore();
+  const { currentView, isDetailMode, dashboardBackground } = useStore();
 
   const renderView = () => {
     switch (currentView) {
@@ -49,7 +56,10 @@ function AppContent() {
       <Sidebar />
 
       {/* Main Content */}
-      <main className="min-h-screen flex flex-col lg:ml-[260px]">
+      <main
+        className="min-h-screen flex flex-col lg:ml-[260px] transition-colors duration-300"
+        style={currentView === 'dashboard' ? { backgroundColor: DASHBOARD_BACKGROUND_COLORS[dashboardBackground] } : undefined}
+      >
         {/* Topbar */}
         <Topbar />
 

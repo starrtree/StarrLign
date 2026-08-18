@@ -2,9 +2,16 @@
 
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import { X, Moon, Sun, Download, Trash2, RefreshCw, Info, Database, Volume2, VolumeX, Rocket } from 'lucide-react';
+import { X, Moon, Sun, Download, Trash2, RefreshCw, Info, Database, Volume2, VolumeX, Rocket, Palette, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
+
+const DASHBOARD_BACKGROUND_OPTIONS = [
+  { id: 'neutral', label: 'Neutral', color: '#f5f5f0' },
+  { id: 'mint', label: 'Mint', color: '#b9e3cc' },
+  { id: 'powder-blue', label: 'Powder Blue', color: '#b8d0e3' },
+  { id: 'lavender', label: 'Lavender', color: '#dfb4df' },
+] as const;
 
 export default function SettingsModal() {
   const {
@@ -15,8 +22,10 @@ export default function SettingsModal() {
     documents,
     tags,
     theme,
+    dashboardBackground,
     soundEnabled,
     setTheme,
+    setDashboardBackground,
     setSoundEnabled,
     deleteTask,
     journeyStartDate,
@@ -199,6 +208,44 @@ export default function SettingsModal() {
                     {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                     {isDarkMode ? 'LIGHT MODE' : 'DARK MODE'}
                   </button>
+                </div>
+              </div>
+
+              <div className="p-4 border-[2px] border-[var(--brand-blue)] dark:border-black rounded-lg bg-white dark:bg-[var(--brand-blue-dark)]/50">
+                <div className="mb-3 flex items-center gap-3">
+                  <Palette className="h-5 w-5 text-[var(--brand-blue)] dark:text-[var(--brand-yellow)]" />
+                  <div>
+                    <div className="font-medium text-sm text-[var(--gray-800)] dark:text-white">Dashboard Background</div>
+                    <div className="text-xs text-[var(--gray-500)] dark:text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>
+                      Choose the canvas behind your Priority Stack
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Dashboard background color">
+                  {DASHBOARD_BACKGROUND_OPTIONS.map((option) => {
+                    const selected = dashboardBackground === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={selected}
+                        aria-label={`Use ${option.label} dashboard background`}
+                        onClick={() => {
+                          setDashboardBackground(option.id);
+                          toast.success(`${option.label} dashboard selected`);
+                        }}
+                        className={cn(
+                          'group relative overflow-hidden rounded-lg border-[2px] p-1.5 text-left transition-all hover:-translate-y-0.5',
+                          selected ? 'border-black shadow-[3px_3px_0_black]' : 'border-[var(--gray-300)] hover:border-black'
+                        )}
+                      >
+                        <span className="block h-10 rounded-md border border-black/20" style={{ backgroundColor: option.color }}>
+                          {selected && <span className="grid h-full place-items-center"><span className="grid size-5 place-items-center rounded-full bg-black text-white"><Check className="size-3" /></span></span>}
+                        </span>
+                        <span className="mt-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-[var(--gray-800)] dark:text-white" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>{option.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

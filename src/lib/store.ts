@@ -10,6 +10,7 @@ import {
   Project,
   ProjectCategory,
   Task,
+  DashboardBackground,
 } from './types';
 
 const uuid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -24,6 +25,14 @@ function applyTheme(theme: 'light' | 'dark') {
   if (typeof document === 'undefined') return;
   document.documentElement.classList.toggle('dark', theme === 'dark');
   window.localStorage.setItem('starrlign-theme', theme);
+}
+
+const dashboardBackgrounds: DashboardBackground[] = ['neutral', 'mint', 'powder-blue', 'lavender'];
+
+function getInitialDashboardBackground(): DashboardBackground {
+  if (typeof window === 'undefined') return 'neutral';
+  const stored = window.localStorage.getItem('starrlign-dashboard-background') as DashboardBackground | null;
+  return stored && dashboardBackgrounds.includes(stored) ? stored : 'neutral';
 }
 
 export const createNewBlock = (type: BlockType, content = '', meta: Block['meta'] = {}): Block => ({
@@ -290,6 +299,7 @@ export const useStore = create<AppState>((set, get) => ({
   isSettingsOpen: false,
   isSearchOpen: false,
   theme: getInitialTheme(),
+  dashboardBackground: getInitialDashboardBackground(),
   soundEnabled: true,
   autoSetProjectForTask: null,
   journeyStartDate: null,
@@ -656,6 +666,10 @@ export const useStore = create<AppState>((set, get) => ({
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
+  },
+  setDashboardBackground: (background) => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('starrlign-dashboard-background', background);
+    set({ dashboardBackground: background });
   },
   setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
   setSearchOpen: (open) => set({ isSearchOpen: open }),
