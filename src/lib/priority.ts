@@ -96,5 +96,5 @@ export function rankTasks(tasks: Task[], options: { now?: Date; projectNames?: s
   });
 
   let rank = 0;
-  return classified.map((item) => ({ ...item, rank: item.tier === 'needs-scheduling' ? null : ++rank }));
+  return classified.map((item) => ({ ...item, rank: item.tier === 'blocked' ? null : ++rank }));
 }
