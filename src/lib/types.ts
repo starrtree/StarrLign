@@ -125,7 +125,7 @@ export interface InvestmentPosition {
 }
 
 export type ViewType = 'dashboard' | 'kanban' | 'documents' | 'projects' | 'archive' | 'money' | 'calendar';
-export type DashboardBackground = 'neutral' | 'mint' | 'powder-blue' | 'lavender';
+export type DashboardBackground = string;
 
 export interface AppState {
   currentView: ViewType;

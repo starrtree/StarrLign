@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-const [, , binName, ...args] = process.argv;
+const [, , binName, ...rawArgs] = process.argv;
 
 if (!binName) {
   console.error('Usage: node scripts/run-local-bin.mjs <bin> [...args]');
@@ -11,6 +11,11 @@ if (!binName) {
 const isWindows = process.platform === 'win32';
 const binFile = isWindows ? `${binName}.cmd` : binName;
 const binPath = path.join(process.cwd(), 'node_modules', '.bin', binFile);
+const args = rawArgs.flatMap((arg) => {
+  if (binName === 'next' && arg === '--host') return ['--hostname'];
+  if (binName === 'next' && arg === '--strictPort') return [];
+  return [arg];
+});
 const escapedArgs = args.map((arg) => {
   if (/^[A-Za-z0-9_./:-]+$/.test(arg)) {
     return arg;

@@ -13,19 +13,19 @@ export function PriorityFilters({ projects, selected, onChange }: { projects: Pr
   return (
     <div>
       <div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <button type="button" aria-pressed={!selected.length} onClick={() => onChange([])} className={`h-10 shrink-0 rounded-xl border-2 px-4 text-sm font-bold ${!selected.length ? 'border-black bg-[#e8f2ff]' : 'border-slate-400 bg-white'}`}>
+        <button type="button" aria-pressed={!selected.length} onClick={() => onChange([])} className={`h-10 shrink-0 rounded-xl border-2 px-4 text-sm font-bold text-[var(--dashboard-text)] ${!selected.length ? 'border-black bg-[#0052b4]/15' : 'border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]'}`}>
           <span className="mr-2 inline-grid size-4 place-items-center rounded-full border-2 border-[#0052b4] text-[10px] text-[#0052b4]">{!selected.length ? '✓' : ''}</span>All
         </button>
         {projects.filter((project) => !project.isArchived).map((project) => {
           const active = selected.includes(project.name);
           const color = projectHex(project.color);
-          return <button key={project.id} type="button" aria-pressed={active} onClick={() => toggle(project.name)} className={`h-10 shrink-0 rounded-xl border-2 px-4 text-sm font-semibold text-black ${active ? 'border-black font-bold' : 'border-slate-400 bg-white'}`} style={active ? { backgroundColor: `${color}22` } : undefined}>
+          return <button key={project.id} type="button" aria-pressed={active} onClick={() => toggle(project.name)} className={`h-10 shrink-0 rounded-xl border-2 px-4 text-sm font-semibold text-[var(--dashboard-text)] ${active ? 'border-black font-bold' : 'border-[var(--dashboard-border)] bg-[var(--dashboard-surface)]'}`} style={active ? { backgroundColor: `${color}33` } : undefined}>
             <span className="mr-2 inline-grid size-4 place-items-center rounded-full border-2 text-[10px] font-black" style={{ borderColor: color, backgroundColor: active ? color : 'white', color: active ? 'white' : 'transparent' }}>✓</span>{project.name}
           </button>;
         })}
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-slate-400 bg-white font-black text-slate-700" aria-label="More project filters">•••</span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-2 border-[var(--dashboard-border)] bg-[var(--dashboard-surface)] font-black text-[var(--dashboard-subtle)]" aria-label="More project filters">•••</span>
       </div>
-      {!!selected.length && <p className="mt-2 text-xs font-medium text-slate-600 md:text-sm">∞ Multi-select is on — showing tasks from <strong className="text-[#0052b4]">{selected.length} categories</strong></p>}
+      {!!selected.length && <p className="mt-2 text-xs font-medium text-[var(--dashboard-subtle)] md:text-sm">∞ Multi-select is on — showing tasks from <strong className="text-[#2684ff]">{selected.length} categories</strong></p>}
     </div>
   );
 }

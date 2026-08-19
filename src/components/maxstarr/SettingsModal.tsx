@@ -39,6 +39,7 @@ export default function SettingsModal() {
   const [isResetting, setIsResetting] = useState(false);
   const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
   const isDarkMode = theme === 'dark';
+  const selectedBackgroundColor = DASHBOARD_BACKGROUND_OPTIONS.find((option) => option.id === dashboardBackground)?.color ?? dashboardBackground;
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
@@ -93,6 +94,10 @@ export default function SettingsModal() {
   const handleToggleSound = () => {
     setSoundEnabled(!soundEnabled);
     toast.success(soundEnabled ? 'Sound effects disabled' : 'Sound effects enabled');
+  };
+
+  const handleBackgroundColor = (color: string) => {
+    setDashboardBackground(color.toLowerCase());
   };
 
   const handleStartReset = () => {
@@ -221,7 +226,38 @@ export default function SettingsModal() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Dashboard background color">
+                <div className="mb-3 flex items-center gap-3 rounded-lg border-2 border-[var(--gray-300)] bg-[var(--shimmering-opal)] p-2 dark:border-white/20 dark:bg-black/20">
+                  <label className="relative grid size-12 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg border-2 border-black shadow-[2px_2px_0_black]" style={{ backgroundColor: selectedBackgroundColor }}>
+                    <input
+                      type="color"
+                      value={selectedBackgroundColor}
+                      onChange={(event) => handleBackgroundColor(event.target.value)}
+                      className="absolute inset-0 size-full cursor-pointer opacity-0"
+                      aria-label="Choose a custom dashboard color"
+                    />
+                    <Palette className="size-5 text-black/70 mix-blend-multiply" />
+                  </label>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--gray-600)] dark:text-white/60" style={{ fontFamily: 'var(--font-space-mono), monospace' }}>Custom color</div>
+                    <input
+                      key={selectedBackgroundColor}
+                      type="text"
+                      defaultValue={selectedBackgroundColor.toUpperCase()}
+                      maxLength={7}
+                      onBlur={(event) => {
+                        if (/^#[0-9a-f]{6}$/i.test(event.target.value)) handleBackgroundColor(event.target.value);
+                        else event.target.value = selectedBackgroundColor.toUpperCase();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') event.currentTarget.blur();
+                      }}
+                      className="mt-0.5 w-full bg-transparent text-sm font-black uppercase text-[var(--gray-800)] outline-none dark:text-white"
+                      aria-label="Custom dashboard color hex value"
+                    />
+                  </div>
+                  <span className="rounded-full bg-black px-2 py-1 text-[9px] font-bold uppercase text-white dark:bg-white dark:text-black">Pick any</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Dashboard background presets">
                   {DASHBOARD_BACKGROUND_OPTIONS.map((option) => {
                     const selected = dashboardBackground === option.id;
                     return (

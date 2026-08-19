@@ -27,12 +27,19 @@ function applyTheme(theme: 'light' | 'dark') {
   window.localStorage.setItem('starrlign-theme', theme);
 }
 
-const dashboardBackgrounds: DashboardBackground[] = ['neutral', 'mint', 'powder-blue', 'lavender'];
+const dashboardBackgroundPresets: Record<string, string> = {
+  neutral: '#f5f5f0',
+  mint: '#b9e3cc',
+  'powder-blue': '#b8d0e3',
+  lavender: '#dfb4df',
+};
+
+const isHexColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value);
 
 function getInitialDashboardBackground(): DashboardBackground {
   if (typeof window === 'undefined') return 'neutral';
-  const stored = window.localStorage.getItem('starrlign-dashboard-background') as DashboardBackground | null;
-  return stored && dashboardBackgrounds.includes(stored) ? stored : 'neutral';
+  const stored = window.localStorage.getItem('starrlign-dashboard-background');
+  return stored && (stored in dashboardBackgroundPresets || isHexColor(stored)) ? stored : 'neutral';
 }
 
 export const createNewBlock = (type: BlockType, content = '', meta: Block['meta'] = {}): Block => ({
@@ -668,6 +675,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ theme });
   },
   setDashboardBackground: (background) => {
+    if (!(background in dashboardBackgroundPresets) && !isHexColor(background)) return;
     if (typeof window !== 'undefined') window.localStorage.setItem('starrlign-dashboard-background', background);
     set({ dashboardBackground: background });
   },
